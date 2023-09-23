@@ -1,0 +1,8 @@
+build
+
+out
+out.asm
+out.o
+vgcore.*
+
+.notes.md
