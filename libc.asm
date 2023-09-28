@@ -10,6 +10,11 @@ section .text
 _start:
     ;; RSP is already aligned by 16 on entry at _start, unlike in functions
 
+    lea    rdi, [format_d]
+    lea    rsi, [num1]
+    xor    eax, eax
+    call   printf
+
     lea    rdi, [format]        ; argument #1   or better  mov edi, format
     lea    rsi, [message]       ; argument #2
     xor    eax, eax             ; no FP args to the variadic function
@@ -22,7 +27,10 @@ _start:
 section .rodata        ;; read-only data can go in .rodata instead of read-write .data
 
     message:    db "Hello, world!", 0
-    format:   db "%s", 0xa, 0
+    format:     db "%s", 0xa, 0
+    format_d:   db "%s", 0xa, 0
+    num1:       db "3", 0
+    num2:       db 1, 0
 
 
 ;;; Assemble normally, link with gcc -no-pie -nostartfiles hello.o.

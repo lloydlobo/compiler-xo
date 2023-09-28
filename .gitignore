@@ -1,8 +1,23 @@
+# build compiler output
+
 build
 
+# build artifacts
+
+libc
+libc.o
 out
-out.asm
 out.o
+tmp
+tmp.o
+
+# valgrind artifacts
+
 vgcore.*
+
+# editor / linter artifacts
+.cache
+
+# notes / text
 
 .notes.md

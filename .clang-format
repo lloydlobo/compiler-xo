@@ -5,7 +5,9 @@ BinPackParameters: false
 BinPackArguments: false
 AllowAllParametersOfDeclarationOnNextLine: true
 NamespaceIndentation: None
+
 # BreakBeforeBraces: Stroustrup
+
 ColumnLimit: 120
 PenaltyReturnTypeOnItsOwnLine: 200
 PenaltyIndentedWhitespace: 1
