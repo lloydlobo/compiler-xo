@@ -33,13 +33,15 @@ section .rodata        ;; read-only data can go in .rodata instead of read-write
     num2:       db 1, 0
 
 
-;;; Assemble normally, link with gcc -no-pie -nostartfiles hello.o.
-;;; This omits the CRT startup files that would normally define a _start that does some stuff before calling main. Libc init functions are called from dynamic linker hooks so printf is usable.
-;;; (Source](https://stackoverflow.com/a/55315078)
-;;;
-;;; $ nasm -f elf64 libc.asm -o libc.o
-;;; $ gcc -no-pie -nostartfiles libc.o -o libc
-;;; $ file libc
-;;;   libc: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=ce3ee0cb1a2640121c1620318c4fddf53cf31600, not stripped
+; Assemble normally, link with gcc -no-pie -nostartfiles hello.o.
+; This omits the CRT startup files that would normally define a _start that does some stuff before calling main. Libc init functions are called from dynamic linker hooks so printf is usable.
+; (Source](https://stackoverflow.com/a/55315078)
+;
+; ```shell
+; nasm -f elf64 libc.asm -o libc.o
+; gcc -no-pie -nostartfiles libc.o -o libc
+; file libc
+;   libc: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=ce3ee0cb1a2640121c1620318c4fddf53cf31600, not stripped
+; ```
 
 

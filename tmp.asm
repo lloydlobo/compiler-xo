@@ -1,6 +1,11 @@
 ; NASM(x86-64)
-; $ nasm -f elf64 tmp.asm -o tmp.o
-; $ ld tmp.o -o tmp
+;
+; ```shell
+; nasm -f elf64 tmp.asm -o tmp.o
+; ld tmp.o -o tmp
+; ./tmp
+; echo $?
+; ```
 
 section .data
     num1 db 10

@@ -43,4 +43,4 @@ valgrind --track-origins=yes ./build/xo test.xo
 
 ## Credits
 
-[orosmatthew/hydrogen-cpp](https://github.com/orosmatthew/hydrogen-cpp/blob/master/src/main.cpp)
+[orosmatthew/hydrogen-cpp](https://github.com/orosmatthew/hydrogen-cpp)

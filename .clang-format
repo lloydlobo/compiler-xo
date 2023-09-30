@@ -6,9 +6,9 @@ BinPackArguments: false
 AllowAllParametersOfDeclarationOnNextLine: true
 NamespaceIndentation: None
 
-# BreakBeforeBraces: Stroustrup
+BreakBeforeBraces: Stroustrup
 
-ColumnLimit: 120
+ColumnLimit: 80
 PenaltyReturnTypeOnItsOwnLine: 200
 PenaltyIndentedWhitespace: 1
 PointerAlignment: Right

@@ -21,3 +21,4 @@ vgcore.*
 # notes / text
 
 .notes.md
+src/lib/output
