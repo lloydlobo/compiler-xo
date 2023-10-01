@@ -43,5 +43,3 @@ section .rodata        ;; read-only data can go in .rodata instead of read-write
 ; file libc
 ;   libc: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=ce3ee0cb1a2640121c1620318c4fddf53cf31600, not stripped
 ; ```
-
-

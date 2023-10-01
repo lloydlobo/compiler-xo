@@ -14,19 +14,18 @@
 /* #define CASE_ENUM_TO_STR(e) case e: return #e */
 
 /* TokenType */
-enum TokenType
-// clang-format off
-{
+enum TokenType {
     TOK_EXIT,
     TOK_INT_LIT,
     TOK_SEMICOLON,
-    TOK_PAREN_OPEN,   TOK_PAREN_CLOSE,
-    TOK_CURLY_OPEN, TOK_CURLY_CLOSE,
+    TOK_PAREN_OPEN,
+    TOK_PAREN_CLOSE,
+    TOK_CURLY_OPEN,
+    TOK_CURLY_CLOSE,
     TOK_IDENT,
     TOK_LET,
-    TOK_EQUAL,
+    TOK_EQUAL
 };
-// clang-format on
 
 /** token */
 struct token {

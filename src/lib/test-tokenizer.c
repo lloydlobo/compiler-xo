@@ -1,88 +1,90 @@
-#include <assert.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "prelude-test.h"
 
 #include "../tokenizer.h"
 
-// Enum to define error codes
-static enum ErrorCodes {
-    ERR_CMP_SUCCESS = 0, // Success
-    ERR_CMP_TYPE_MISMATCH = -1, // Type mismatch error
-    ERR_CMP_VALUE_MISMATCH = -2 // Value mismatch error
+struct src_tokens_tuple {
+    const char *m_src;
+    struct token *m_tokens;
 };
 
-/**
- * 1. Check if the types are equal
- * 2. Check if both values are `NULL` or if their content is the same
- */
-static int token_cmp_eq(
-    struct token t1, struct token t2, char *err_msg, size_t err_msg_size)
-{ // clang-format off
-    if (t1.type != t2.type) {
-        snprintf( err_msg, err_msg_size, "Expected type %d, got type %d", t2.type, t1.type);
-        return ERR_CMP_TYPE_MISMATCH;
-    }
+static const struct src_tokens_tuple test_data[] = {
+    { "exit 0 ;",
+      (struct token[]) { { .type = TOK_EXIT },
+                         { .type = TOK_INT_LIT, .value = "0" },
+                         { .type = TOK_SEMICOLON } } },
+    { "let x = 1;",
+      (struct token[]) { { .type = TOK_LET },
+                         { .type = TOK_IDENT, .value = "x" },
+                         { .type = TOK_EQUAL },
+                         { .type = TOK_INT_LIT, .value = "1" },
+                         { .type = TOK_SEMICOLON } } },
+    { "exit(0);",
+      (struct token[]) { { .type = TOK_EXIT },
+                         { .type = TOK_PAREN_OPEN },
+                         { .type = TOK_INT_LIT, .value = "0" },
+                         { .type = TOK_PAREN_CLOSE },
+                         { .type = TOK_SEMICOLON } } },
+};
 
-    if ((t1.value != t2.value) && (t1.value == NULL || t2.value == NULL || strcmp(t1.value, t2.value) != 0)) {
-        snprintf( err_msg, err_msg_size, "Expected value '%s', got value '%s'", t2.value, t1.value);
-        return ERR_CMP_VALUE_MISMATCH;
-    } // clang-format on
-
-    return ERR_CMP_SUCCESS;
-}
-
-static void print_err(int line, const char *error_message)
+static int test_tokens_stmts(void)
 {
-    fprintf(stderr, "Error at line %d: %s\n", line, error_message);
-}
+    struct tokenizer *tokenizer;
+    struct token *tokens;
+    int mut_token_count;
 
-static int test_tokens(void)
-{
-    char *src = "let x = 1;";
-    struct token exp_tokens[] = {
-        { .type = TOK_LET, .value = NULL },
-        { .type = TOK_IDENT, .value = "x" },
-        { .type = TOK_EQUAL, .value = NULL },
-        { .type = TOK_INT_LIT, .value = "1" },
-        { .type = TOK_SEMICOLON, .value = NULL },
-    }; // expected hardcoded tokens for `let x = 1;`
-    int exp_token_count = sizeof(exp_tokens) / sizeof(exp_tokens[0]);
+    size_t i;
+    size_t n = sizeof(test_data) / sizeof(const struct src_tokens_tuple);
 
-    int mut_token_count = 0;
-    struct tokenizer *tokenizer = tokenizer_init(src);
-    struct token *tokens = tokenizer_tokenize(tokenizer, &mut_token_count);
+    for (i = 0; i < n; i++) {
+        mut_token_count = 0;
+        tokenizer = tokenizer_init(test_data[i].m_src);
+        tokens = tokenizer_tokenize(tokenizer, &mut_token_count);
 
-    if (exp_token_count != mut_token_count) {
-        print_err(__LINE__, "Token count mismatch");
-        goto fail;
-    }
+        printf(
+            "--%d-- i: %zu stmt: %s\n",
+            __LINE__,
+            i,
+            test_data[i].m_src); // DEBUG
 
-    int i;
-    char err_msg[256];
-    for (i = 0; i < exp_token_count; i++) {
-        int res
-            = token_cmp_eq(tokens[i], exp_tokens[i], err_msg, sizeof(err_msg));
-        if (res != ERR_CMP_SUCCESS) {
-            print_err(__LINE__, err_msg);
+        int j;
+        char err_msg[256];
+        while (j < mut_token_count) {
+            int res = token_cmp_eq(
+                tokens[j], test_data[i].m_tokens[j], err_msg, sizeof(err_msg));
+            if (res != ERR_CMP_SUCCESS) {
+                printf("Token %d mismatch: %s\n", j, err_msg);
+                goto fail;
+            }
+            j++;
+        }
+
+        if (mut_token_count != j) {
+            printf(
+                "Token count mismatch: expected %d, got %d\n",
+                j,
+                mut_token_count);
             goto fail;
         }
+
+        tokenizer_free(tokenizer);
+        token_free_tokens(tokens, mut_token_count);
+        printf("Test Case %zu: PASSED\n", i);
     }
 
     return 0; // Successful
 
 fail:
+
     tokenizer_free(tokenizer);
     token_free_tokens(tokens, mut_token_count);
 
     return -1; // Not Successful
 }
 
-int main(int argc, char *argv[])
+int main(void)
 {
-    assert(0 == test_tokens());
-    printf("Test passed: test_tokens\n");
+    assert(0 == test_tokens_stmts());
+    printf("Test passed: test_tokens_stmts\n");
 
     return 0;
 }
