@@ -24,6 +24,7 @@ mov rax, 60 ;; linux syscall code for exit
 mov rdi, 0 ;; code to return. 0 Success 1 Error ...
 syscall
 ```
+
 #### `linking`
 
 ```shell
@@ -35,6 +36,7 @@ ld test.o -o test
 ./test      # Execute generated binary
 echo $?     # See exit code
 ```
+
 #### memory error detection with `valgrind`
 
 ```shell

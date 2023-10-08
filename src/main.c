@@ -14,6 +14,7 @@
 
 #include "generator.h"
 #include "parser.h"
+#include "tokenizer.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define sizeof_field(t, f) (sizeof(((t *)0)->f))
@@ -49,45 +50,66 @@ int main(int argc, char *argv[])
             fclose(input_file_xo);
             return EXIT_FAILURE;
         }
-        contents[input_size]
-            = '\0'; // `strdup` relies on null -terminated strings
+        contents[input_size] = '\0';
         fclose(input_file_xo);
     }
 
     /* module::tokenizer.c */
 
     int mut_token_count = 0;
-    struct tokenizer *tokenizer = tokenizer_init(contents);
-    struct token *tokens = tokenizer_tokenize(tokenizer, &mut_token_count);
-    tokenizer_free(tokenizer);
+    struct tokenizer *tokenizer = t_init(contents);
+    struct token *tokens = t_tokenize(tokenizer, &mut_token_count);
+    t_free(tokenizer);
 
     /* module::parser.c */
 
-    struct parser *parser = parser_init(tokens, mut_token_count);
-    struct node_prog *prog = parser_parse_prog(parser);
+    struct parser *parser = p_init(tokens, mut_token_count);
+
+    struct node_prog *prog = p_parse_prog(parser);
     if (prog == NULL)
         goto err_clean_parser_tokens;
 
-    parser_free(parser);
+    if (prog != NULL) {
+        // Print the parsed prog
+        printf("Parsed prog:\n");
+        for (size_t i = 0; i < prog->stmt_count; i++) {
+            struct node_stmt stmt = prog->stmts[i];
+            if (stmt.type == STMT_EXIT) {
+                printf(
+                    "Exit Statement with code: %s\n",
+                    stmt.var.exit_expr.var.int_lit.value);
+            }
+            else if (stmt.type == STMT_LET) {
+                printf(
+                    "Let Statement: %s = %s\n",
+                    stmt.var.let_expr.ident.value,
+                    stmt.var.let_expr.expr.var.int_lit.value);
+            }
+        }
+
+        // Free memory allocated for the prog
+        free(prog->stmts);
+        free(prog);
+    }
+
+    int p_stmt_count = prog->stmt_count;
+
+    p_free(parser);
     token_free_tokens(tokens, mut_token_count);
 
     /* module::generator.c */
 
     // struct generator *generator = generator_init(prog);
     // parser_free_prog(prog);
-
     // char *output_asm = generator_generate_prog(generator);
     // if (output_asm == NULL)
     //     goto err_clean_generator;
-
     // generator_free(generator);
-
     // {
     //     printf("Generated Assembly Code:\n%s\n", output_asm);
     //     FILE *file_out_asm = fopen("out.asm", "w");
     //     if (file_out_asm == NULL)
     //         goto err_clean_output_asm;
-
     //     fputs(output_asm, file_out_asm);
     //     fclose(file_out_asm);
     // }
@@ -112,7 +134,7 @@ int main(int argc, char *argv[])
 
 err_clean_parser_tokens:
     fprintf(stderr, "--%d-- Invalid program\n", __LINE__);
-    parser_free(parser);
+    p_free(parser);
     token_free_tokens(tokens, mut_token_count);
     return EXIT_FAILURE;
 }

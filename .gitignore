@@ -22,3 +22,5 @@ vgcore.*
 
 .notes.md
 src/lib/output
+src/neoparser.h
+src/output

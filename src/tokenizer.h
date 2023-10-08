@@ -9,23 +9,47 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Define a macro to convert enum values to strings */
+#define ERR_DBG(msg) fprintf(stderr, "--%d-- %s ", __LINE__, msg);
+#define ERR_DBG_LN(msg) fprintf(stderr, "--%d-- %s\n", __LINE__, msg);
+
+/*
+ * Define macros to convert enum values to strings
+ */
 #define ENUM_TO_STR(e) #e
-/* #define CASE_ENUM_TO_STR(e) case e: return #e */
+#define CASE_ENUM_TO_STR(e) \
+    case e: \
+        return #e
 
 /* TokenType */
 enum TokenType {
-    TOK_EXIT,
-    TOK_INT_LIT,
-    TOK_SEMICOLON,
-    TOK_PAREN_OPEN,
-    TOK_PAREN_CLOSE,
-    TOK_CURLY_OPEN,
-    TOK_CURLY_CLOSE,
-    TOK_IDENT,
-    TOK_LET,
-    TOK_EQUAL
+    TEXIT,
+    TINT_LIT,
+    TSEMICOLON,
+    TPAREN_OPEN,
+    TPAREN_CLOSE,
+    TCURLY_OPEN,
+    TCURLY_CLOSE,
+    TIDENT,
+    TLET,
+    TEQUAL
 };
+
+const char *tokentype_to_str(enum TokenType self)
+{
+    switch (self) {
+        CASE_ENUM_TO_STR(TEXIT);
+        CASE_ENUM_TO_STR(TINT_LIT);
+        CASE_ENUM_TO_STR(TSEMICOLON);
+        CASE_ENUM_TO_STR(TPAREN_OPEN);
+        CASE_ENUM_TO_STR(TPAREN_CLOSE);
+        CASE_ENUM_TO_STR(TCURLY_OPEN);
+        CASE_ENUM_TO_STR(TCURLY_CLOSE);
+        CASE_ENUM_TO_STR(TIDENT);
+        CASE_ENUM_TO_STR(TLET);
+        CASE_ENUM_TO_STR(TEQUAL);
+    }
+    return "Unknown"; // Handle the case where self is not recognized.
+}
 
 /** token */
 struct token {
@@ -38,27 +62,6 @@ struct tokenizer {
     char *m_src;
     size_t m_index;
 };
-
-const char *token_type_to_str(enum TokenType self)
-{
-    // clang-format off
-    switch (self) {
-    case TOK_EXIT:              return ENUM_TO_STR(TOK_EXIT);
-    case TOK_INT_LIT:           return ENUM_TO_STR(TOK_INT_LIT);
-    case TOK_SEMICOLON:         return ENUM_TO_STR(TOK_SEMICOLON);
-    case TOK_PAREN_OPEN:        return ENUM_TO_STR(TOK_PAREN_OPEN);
-    case TOK_PAREN_CLOSE:       return ENUM_TO_STR(TOK_PAREN_CLOSE);
-    case TOK_CURLY_OPEN:        return ENUM_TO_STR(TOK_SQUIRLY_OPEN);
-    case TOK_CURLY_CLOSE:       return ENUM_TO_STR(TOK_SQUIRLY_CLOSE);
-    case TOK_IDENT:             return ENUM_TO_STR(TOK_IDENT);
-    case TOK_LET:               return ENUM_TO_STR(TOK_LET);
-    case TOK_EQUAL:             return ENUM_TO_STR(TOK_EQUAL);
-    default:
-        perror("Found invalid token type\n");
-        return NULL;
-    }
-    // clang-format on
-}
 
 static int buf_clear(char array[], size_t *array_length)
 {
@@ -81,7 +84,7 @@ void token_free_tokens(struct token *self, int token_count)
 
     for (int i = 0; i < token_count; i++) { // clang-format off
         printf( "--%d-- Token %d: %u %s %s\n", __LINE__, i, self[i].type,
-            token_type_to_str(self[i].type), self[i].value); // clang-format on
+            tokentype_to_str(self[i].type), self[i].value); // clang-format on
         if (self[i].value != NULL)
             free(self[i].value);
     }
@@ -90,7 +93,7 @@ void token_free_tokens(struct token *self, int token_count)
 
 /* impl struct tokenizer */
 
-struct tokenizer *tokenizer_init(const char *src)
+struct tokenizer *t_init(const char *src)
 {
     size_t size = sizeof(struct tokenizer);
     struct tokenizer *self = (struct tokenizer *)malloc(size);
@@ -104,31 +107,30 @@ struct tokenizer *tokenizer_init(const char *src)
         perror("Failed to duplicate source string\n");
         goto err_cleanup;
     }
-
     return self;
 
 err_cleanup:
 
     if (self != NULL)
         free(self);
-
     return NULL;
 }
 
-void tokenizer_free(struct tokenizer *self)
+void t_free(struct tokenizer *self)
 {
     if (self == NULL)
         return;
 
     if (self->m_src != NULL)
         free(self->m_src);
+
     free(self);
 }
 
 /**
  * Returns `'\0'`(null character) or actual peeked char at offset (default is 0)
  */
-static char tokenizer_peek(const struct tokenizer *self, int offset)
+static char t_peek(const struct tokenizer *self, int offset)
 {
     if (self->m_index + offset >= (int)strlen(self->m_src))
         return '\0';
@@ -141,7 +143,7 @@ static char tokenizer_peek(const struct tokenizer *self, int offset)
  * - Assertion context to protect against maintenace
  * - Also check if garbage value is not returned
  */
-static char tokenizer_consume(struct tokenizer *self)
+static char t_consume(struct tokenizer *self)
 {
     assert(self->m_src[(self->m_index)] && "Is validated by peek caller");
     assert(
@@ -151,7 +153,7 @@ static char tokenizer_consume(struct tokenizer *self)
     return self->m_src[(self->m_index)++];
 }
 
-struct token *tokenizer_tokenize(struct tokenizer *self, int *token_count)
+struct token *t_tokenize(struct tokenizer *self, int *token_count)
 {
     *token_count = 0;
     size_t m_src_length = strlen(self->m_src);
@@ -167,59 +169,58 @@ struct token *tokenizer_tokenize(struct tokenizer *self, int *token_count)
     int offset = 0;
     size_t i = 0;
 
-    while (tokenizer_peek(self, offset) != '\0') {
-        if (isalpha(tokenizer_peek(self, offset))) {
-            buf[i++] = tokenizer_consume(self);
-            while (tokenizer_peek(self, offset) != '\0'
-                   && isalnum(tokenizer_peek(self, offset))) {
-                buf[i++] = tokenizer_consume(self);
+    while (t_peek(self, offset) != '\0') {
+        if (isalpha(t_peek(self, offset))) {
+            buf[i++] = t_consume(self);
+            while (t_peek(self, offset) != '\0'
+                   && isalnum(t_peek(self, offset))) {
+                buf[i++] = t_consume(self);
             }
             buf[i] = '\0'; // Null-terminate the token buffer
             if (strcmp(buf, "exit") == 0) {
-                tokens[(*token_count)++] = (struct token) { .type = TOK_EXIT };
+                tokens[(*token_count)++] = (struct token) { .type = TEXIT };
                 buf_clear(buf, &i);
             }
             else if (strcmp(buf, "let") == 0) {
-                tokens[(*token_count)++] = (struct token) { .type = TOK_LET };
+                tokens[(*token_count)++] = (struct token) { .type = TLET };
                 buf_clear(buf, &i);
             }
             else {
                 (tokens[(*token_count)++]
-                 = (struct token) { .type = TOK_IDENT, .value = strdup(buf) });
+                 = (struct token) { .type = TIDENT, .value = strdup(buf) });
                 buf_clear(buf, &i);
             }
         }
-        else if (isdigit(tokenizer_peek(self, offset))) {
-            buf[i++] = tokenizer_consume(self);
-            while (tokenizer_peek(self, offset) != '\0'
-                   && isdigit(tokenizer_peek(self, offset))) {
-                buf[i++] = tokenizer_consume(self);
+        else if (isdigit(t_peek(self, offset))) {
+            buf[i++] = t_consume(self);
+            while (t_peek(self, offset) != '\0'
+                   && isdigit(t_peek(self, offset))) {
+                buf[i++] = t_consume(self);
             }
             buf[i] = '\0';
             (tokens[(*token_count)++]
-             = (struct token) { .type = TOK_INT_LIT, .value = strdup(buf) });
+             = (struct token) { .type = TINT_LIT, .value = strdup(buf) });
             buf_clear(buf, &i);
         }
-        else if (tokenizer_peek(self, offset) == '(') {
-            tokenizer_consume(self);
+        else if (t_peek(self, offset) == '(') {
+            t_consume(self);
+            (tokens[(*token_count)++] = (struct token) { .type = TPAREN_OPEN });
+        }
+        else if (t_peek(self, offset) == ')') {
+            t_consume(self);
             (tokens[(*token_count)++]
-             = (struct token) { .type = TOK_PAREN_OPEN });
+             = (struct token) { .type = TPAREN_CLOSE });
         }
-        else if (tokenizer_peek(self, offset) == ')') {
-            tokenizer_consume(self);
-            (tokens[(*token_count)++]
-             = (struct token) { .type = TOK_PAREN_CLOSE });
+        else if (t_peek(self, offset) == ';') {
+            t_consume(self);
+            tokens[(*token_count)++] = (struct token) { .type = TSEMICOLON };
         }
-        else if (tokenizer_peek(self, offset) == ';') {
-            tokenizer_consume(self);
-            tokens[(*token_count)++] = (struct token) { .type = TOK_SEMICOLON };
+        else if (t_peek(self, offset) == '=') {
+            t_consume(self);
+            (tokens[(*token_count)++] = (struct token) { .type = TEQUAL });
         }
-        else if (tokenizer_peek(self, offset) == '=') {
-            tokenizer_consume(self);
-            (tokens[(*token_count)++] = (struct token) { .type = TOK_EQUAL });
-        }
-        else if (isspace(tokenizer_peek(self, offset))) {
-            tokenizer_consume(self);
+        else if (isspace(t_peek(self, offset))) {
+            t_consume(self);
         }
         else {
             perror("You messed up while peeking!\n");
@@ -248,39 +249,34 @@ char *token_array_to_asm(struct token self[], size_t token_count)
             self[i].type,
             self[i].value);
 
-        if (self[i].type == TOK_EXIT) {
+        if (self[i].type == TEXIT) {
             // char *output_asm = NULL; // Dynamic buffer
-            // {
-            //     // SUBMODULE::generater.c::tokens_to_asm REFACTOR: to
-            //     function...
+            // static size_t MAX_ASM_SIZE = 10000; // PERF: generate
+            // // required memory based on input file
+            // size_t len_token = token_count;
             //
-            //     static size_t MAX_ASM_SIZE = 10000; // PERF: generate
-            //     required memory based on input file size_t len_token =
-            //     token_count;
+            // output_asm = (char *)malloc(MAX_ASM_SIZE * sizeof(char)); //
+            // adjust size as needed if (output_asm == NULL) {
+            //     fprintf(stderr, "Failed to allocate memory to assembly
+            //     output\n"); exit(EXIT_FAILURE); // return NULL; // if in
+            //     a function
+            // }
+            // output_asm[0] = '\0'; // initialize buffer
+            // strcat(output_asm, "global _start\n_start:\n");
             //
-            //     output_asm = (char *)malloc(MAX_ASM_SIZE * sizeof(char)); //
-            //     adjust size as needed if (output_asm == NULL) {
-            //         fprintf(stderr, "Failed to allocate memory to assembly
-            //         output\n"); exit(EXIT_FAILURE); // return NULL; // if in
-            //         a function
-            //     }
-            //     output_asm[0] = '\0'; // initialize buffer
-            //     strcat(output_asm, "global _start\n_start:\n");
-            //
-            //     for (int i = 0; i < len_token; i++) {
-            //         if (tokens[i].type == TOK_EXIT) {
-            //             if (i + 1 < len_token && tokens[i + 1].type ==
-            //             TOK_INT_LIT) {
-            //                 if (i + 2 < len_token && tokens[i + 2].type ==
-            //                 TOK_SEMICOLON) {
-            //                     strcat(output_asm, "    mov rax, 60\n"); //
-            //                     exit code strcat(output_asm, "    mov rdi,
-            //                     "); // register expr char int_lit_str[20];
-            //                     sprintf(int_lit_str, "%s", tokens[i +
-            //                     1].value); // register no. strcat(output_asm,
-            //                     int_lit_str); strcat(output_asm, "\n");
-            //                     strcat(output_asm, "    syscall\n");
-            //                 }
+            // for (int i = 0; i < len_token; i++) {
+            //     if (tokens[i].type == TOK_EXIT) {
+            //         if (i + 1 < len_token && tokens[i + 1].type ==
+            //         TOK_INT_LIT) {
+            //             if (i + 2 < len_token && tokens[i + 2].type ==
+            //             TOK_SEMICOLON) {
+            //                 strcat(output_asm, "    mov rax, 60\n"); //
+            //                 exit code strcat(output_asm, "    mov rdi,
+            //                 "); // register expr char int_lit_str[20];
+            //                 sprintf(int_lit_str, "%s", tokens[i +
+            //                 1].value); // register no. strcat(output_asm,
+            //                 int_lit_str); strcat(output_asm, "\n");
+            //                 strcat(output_asm, "    syscall\n");
             //             }
             //         }
             //     }

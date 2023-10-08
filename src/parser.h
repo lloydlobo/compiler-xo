@@ -2,50 +2,39 @@
 #define DC6E0D4D_9AB8_4772_A498_BCCAE04F1B00
 
 #include "tokenizer.h"
+
 #include <assert.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 
-struct node_expr_int_lit {
-    struct token int_lit;
-};
-
-struct node_expr_ident {
-    struct token ident;
-};
-
 enum NodeExprType {
-    NODE_EXPR_INT_LIT,
-    NODE_EXPR_IDENT,
+    EXPR_INT_LIT,
+    EXPR_IDENT,
 };
 
 struct node_expr {
     enum NodeExprType type;
     union {
-        struct node_expr_int_lit *int_lit;
-        struct node_expr_ident *ident;
+        struct token int_lit;
+        struct token ident;
     } var;
 };
 
-struct node_stmt_exit {
-    struct node_expr *expr;
-};
-
-struct node_stmt_let {
-    struct token ident;
-    struct node_expr *expr;
-};
-
 enum NodeStmtType {
-    NODE_STMT_EXIT,
-    NODE_STMT_LET,
+    STMT_EXIT,
+    STMT_LET,
 };
 
 struct node_stmt {
     enum NodeStmtType type;
     union {
-        struct node_stmt_exit *exit;
-        struct node_stmt_let *let;
+        struct node_expr exit_expr;
+        struct {
+            struct token ident;
+            struct node_expr expr;
+        } let_expr;
     } var;
 };
 
@@ -54,33 +43,31 @@ struct node_prog {
     size_t stmt_count;
 };
 
-/*
- * Parser
- */
 struct parser {
     struct token *m_tokens;
     size_t m_token_count;
     size_t m_index;
 };
 
-void parser_free_expr(struct node_expr *self);
-void parser_free_stmt(struct node_stmt *self);
-void parser_free_prog(struct node_prog *self);
-
-static struct token *parser_peek(const struct parser *self, int offset);
-static struct token *parser_consume(struct parser *self);
-
-/* impl public struct parser */
-
-struct parser *parser_init(struct token *tokens, const size_t token_count)
+static struct token *p_peek(const struct parser *self, int offset)
 {
-    struct parser *self
-        = (struct parser *)(malloc(token_count * sizeof(struct parser)));
+    if (self->m_index + offset >= self->m_token_count)
+        return NULL;
+    return &self->m_tokens[self->m_index + offset];
+}
+
+static struct token *p_consume(struct parser *self)
+{
+    return &self->m_tokens[(self->m_index)++];
+}
+
+struct parser *p_init(struct token *tokens, const size_t token_count)
+{
+    struct parser *self = malloc(sizeof(struct parser));
     if (self == NULL) {
         perror("Failed to allocate memory for Parser\n");
         return NULL;
     }
-
     if (tokens == NULL || token_count == 0) {
         perror("Empty tokens array passed while creating parser\n");
         self->m_tokens = NULL;
@@ -90,137 +77,204 @@ struct parser *parser_init(struct token *tokens, const size_t token_count)
     }
     self->m_index = 0;
     self->m_token_count = token_count;
-
     return self;
 }
 
-void parser_free(struct parser *self)
+void p_free(struct parser *self)
 {
-    if (self != NULL)
-        free(self);
+    free(self);
 }
 
-// FUTURE: It is optional so we need a func pointer
-struct node_expr parser_parse_expr(struct parser *self)
+// -----------------------------------------------
+struct node_expr p_parse_expr(struct parser *self)
 {
-    struct node_expr expr = { 0 };
-    struct token *next_token = parser_peek(self, 0);
-    if (next_token != NULL) {
-        if (next_token->type == NODE_EXPR_INT_LIT) {
-            expr.type = NODE_EXPR_INT_LIT;
-            expr.var.int_lit = &((struct node_expr_int_lit) {
-                .int_lit = *parser_consume(self) });
+    struct node_expr expr;
+    if (p_peek(self, 0) != NULL) {
+        if (p_peek(self, 0)->type == TINT_LIT) {
+            expr.type = EXPR_INT_LIT;
+            expr.var.int_lit = *p_consume(self);
         }
-        else if (next_token->type == NODE_EXPR_IDENT) {
-            expr.type = NODE_EXPR_IDENT;
-            expr.var.ident = &(
-                (struct node_expr_ident) { .ident = *parser_consume(self) });
+        else if (p_peek(self, 0)->type == TIDENT) {
+            expr.type = EXPR_IDENT;
+            expr.var.ident = *p_consume(self);
         }
+        else {
+            expr.type = -1; // Invalid expression
+        }
+    }
+    else {
+        expr.type = -1; // Invalid expression
     }
     return expr;
 }
 
-struct node_stmt parser_parse_stmt(struct parser *self)
+struct node_stmt p_parse_stmt(struct parser *self)
 {
-    struct node_stmt stmt = { 0 };
-    struct token *next_token = parser_peek(self, 0);
-    if (next_token != NULL) {
-        assert(false && "unimplemented");
-    }
-    return stmt;
-}
+    struct node_stmt stmt;
+    if (p_peek(self, 0)->type == TEXIT && p_peek(self, 1) != NULL
+        && p_peek(self, 1)->type == TPAREN_OPEN) {
+        p_consume(self);
+        p_consume(self);
 
-struct node_prog *parser_parse_prog(struct parser *self)
-{
-    struct node_prog *prog;
-    { // TODO: malloc in prog and free memory after calling this func
-        int OFFSET = 0;
-        while (parser_peek(self, OFFSET) != NULL) {
-            struct node_stmt stmt = parser_parse_stmt(self);
-            if (stmt.var.exit != NULL || stmt.var.let != NULL) {
-                assert(false && "unimplemented");
-                return NULL;
-            }
-            else {
-                fprintf(
-                    stderr,
-                    "In function `parser_parse_prog`#while#if 1(%d):\n",
-                    __LINE__);
-                fprintf(stderr, "[%d]: error: Invalid statement\n", __LINE__);
-                return NULL;
-            }
+        struct node_expr node_expr = p_parse_expr(self);
+        if (node_expr.type != -1) {
+            stmt.type = STMT_EXIT;
+            stmt.var.exit_expr = node_expr;
+        }
+        else {
+            fprintf(stderr, "[%d]: error: Invalid expression\n", __LINE__);
+            goto fail;
+        }
+
+        if (p_peek(self, 0) != NULL && p_peek(self, 0)->type == TPAREN_CLOSE) {
+            p_consume(self);
+        }
+        else {
+            fprintf(stderr, "[ERROR] Expected `)`\n");
+            goto fail;
+        }
+        if (p_peek(self, 0) != NULL && p_peek(self, 0)->type == TSEMICOLON) {
+            p_consume(self);
+        }
+        else {
+            fprintf(stderr, "[ERROR] Expected `;`\n");
+            goto fail;
         }
     }
+    else if (
+        p_peek(self, 0) != NULL && p_peek(self, 0)->type == TLET
+        && p_peek(self, 1) != NULL && p_peek(self, 1)->type == TIDENT
+        && p_peek(self, 2) != NULL && p_peek(self, 2)->type == TEQUAL) {
+        p_consume(self);
 
-    return prog;
-}
+        struct node_stmt stmt;
+        stmt.type = STMT_LET;
+        stmt.var.let_expr.ident = *p_consume(self);
 
-void parser_free_expr(struct node_expr *self)
-{
-    if (self == NULL)
-        return;
+        p_consume(self);
 
-    switch (self->type) {
-    case NODE_EXPR_INT_LIT:
-        free(self->var.int_lit);
-        break;
-    case NODE_EXPR_IDENT:
-        free(self->var.ident);
-        break;
+        struct node_expr expr = p_parse_expr(self);
+        if (expr.type != -1) {
+            stmt.var.let_expr.expr = expr;
+        }
+        else {
+            fprintf(stderr, "[%d]: error: Invalid expression\n", __LINE__);
+            goto fail;
+        }
+
+        if (p_peek(self, 0) != NULL && p_peek(self, 0)->type == TSEMICOLON) {
+            p_consume(self);
+        }
+        else {
+            fprintf(stderr, "[ERROR] Expected `;`\n");
+            goto fail;
+        }
+    }
+    else {
+        stmt.type = -1; // Invalid statement
     }
 
-    free(self); // TODO: free(self->var);
+    return stmt;
+
+fail:
+    perror("[ERROR] Parser stmt\n");
+    exit(EXIT_FAILURE);
 }
 
-void parser_free_stmt(struct node_stmt *self)
+struct node_prog *p_parse_prog(struct parser *self)
 {
-    if (self == NULL)
-        return;
-
-    switch (self->type) {
-    case NODE_STMT_EXIT:
-        parser_free_expr(self->var.exit->expr);
-        free(self->var.exit);
-        break;
-    case NODE_STMT_LET:
-        parser_free_expr(self->var.let->expr);
-        free(self->var.let);
-        break;
-    }
-
-    free(self); // TODO: should we free(self->var) too?
-}
-
-void parser_free_prog(struct node_prog *self)
-{
-    if (self == NULL)
-        return;
-
-    for (int i = 0, n = self->stmt_count; i < n; i++) {
-        free(&self->stmts[i]);
-    }
-
-    free(self->stmts);
-    free(self);
-}
-
-/* impl private struct parser */
-
-static struct token *parser_peek(const struct parser *self, int offset)
-{
-    if (self->m_index + offset >= self->m_token_count)
+    struct node_prog *p = malloc(sizeof(struct node_prog));
+    if (p == NULL) {
+        perror("Failed to allocate memory for program");
         return NULL;
+    }
+    p->stmt_count = 0;
+    p->stmts = NULL;
+    p->stmts
+        = malloc(10 * sizeof(struct node_stmt)); // Use malloc here, not calloc
+    if (p->stmts == NULL) {
+        perror("Failed to allocate memory for stmts");
+        free(p);
+        return NULL;
+    }
+    unsigned long n_loop_limit = 50;
+    while (self->m_index < self->m_token_count) {
+        if (n_loop_limit <= 0) {
+            break;
+        }
+        struct node_stmt stmt = p_parse_stmt(self);
+        if (stmt.type == -1) {
+            int count_stmts = p->stmt_count;
+            printf("count: %d\n", count_stmts);
+            free(p->stmts);
+            free(p);
+            return NULL;
+        }
+        p->stmt_count++;
+        p->stmts = realloc(p->stmts, p->stmt_count * sizeof(struct node_stmt));
+        if (p->stmts == NULL) {
+            fprintf(stderr, "Failed to reallocate memory\n");
+            free(p->stmts);
+            free(p);
+            return NULL;
+        }
+        if (stmt.type >= 0) {
+            p->stmts[p->stmt_count - 1] = stmt;
+        }
+        else {
+            fprintf(stderr, "[%d]: error: Invalid statement\n", __LINE__);
+            free(p->stmts);
+            free(p);
+            return NULL;
+        }
+        n_loop_limit--;
+    }
 
-    return &self->m_tokens[self->m_index + offset];
+    return p;
 }
 
-static struct token *parser_consume(struct parser *self)
+static int run_main()
 {
-    return &self->m_tokens[(self->m_index)++];
+    struct token tokens[]
+        = { { TEXIT, NULL },
+            { TPAREN_OPEN, NULL },
+            { TINT_LIT, "42" },
+            { TPAREN_CLOSE, NULL },
+            { TSEMICOLON, NULL } };
+
+    size_t token_count = sizeof(tokens) / sizeof(tokens[0]);
+
+    struct parser *p = p_init(tokens, token_count);
+
+    struct node_prog *program = p_parse_prog(p);
+
+    if (program != NULL) {
+        // Print the parsed program
+        printf("Parsed Program:\n");
+        for (size_t i = 0; i < program->stmt_count; i++) {
+            struct node_stmt stmt = program->stmts[i];
+            if (stmt.type == STMT_EXIT) {
+                printf(
+                    "Exit Statement with code: %s\n",
+                    stmt.var.exit_expr.var.int_lit.value);
+            }
+            else if (stmt.type == STMT_LET) {
+                printf(
+                    "Let Statement: %s = %s\n",
+                    stmt.var.let_expr.ident.value,
+                    stmt.var.let_expr.expr.var.int_lit.value);
+            }
+        }
+
+        // Free memory allocated for the program
+        free(program->stmts);
+        free(program);
+    }
+
+    // Free the parser
+    p_free(p);
+
+    return 0;
 }
-
-// static inline Token try_consume(TokenType type, const std::string& err_msg);
-
-// static inline std::optional<Token> try_consume(TokenType type);
 
 #endif /* DC6E0D4D_9AB8_4772_A498_BCCAE04F1B00 */
