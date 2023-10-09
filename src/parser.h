@@ -12,6 +12,7 @@
 enum NodeExprType {
     EXPR_INT_LIT,
     EXPR_IDENT,
+    EXPR_INVALID = -1,
 };
 
 struct node_expr {
@@ -25,6 +26,7 @@ struct node_expr {
 enum NodeStmtType {
     STMT_EXIT,
     STMT_LET,
+    STMT_INVALID = -1,
 };
 
 struct node_stmt {

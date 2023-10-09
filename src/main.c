@@ -68,19 +68,22 @@ int main(int argc, char *argv[])
     if (prog == NULL)
         goto err_clean_parser_tokens;
     p_node_prog_print(prog);
-    p_free(parser);
-    token_free_tokens(tokens, mut_token_count);
 
     /* module::generator.c */
 
     struct generator generator = g_init(prog);
     char *output_asm = g_gen_prog(&generator);
     // generator_free(generator);
-    if (prog->stmts != NULL)
-        free(prog->stmts);
-    free(prog);
+    if (prog != NULL) {
+        if (prog->stmts != NULL)
+            free(prog->stmts);
+        free(prog);
+    }
     if (output_asm == NULL)
         goto err_clean_generator;
+
+    p_free(parser);
+    token_free_tokens(tokens, mut_token_count);
 
     {
         printf("Generated Assembly Code:\n%s\n", output_asm);

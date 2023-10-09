@@ -24,26 +24,17 @@ struct unordered_map {
  *   Due to Limited numbers of registers wants us to utilize the Stack
  *   Copy something and add it to top of stack..
  */
-// struct generator {
-//     struct var var;
-//     struct node_prog m_prog;
-//     char **m_output;
-//     /* Stack Pointer at compile time */
-//     size_t m_stack_size;
-//     /* Track variable's positions in stack */
-//     struct unordered_map m_vars;
-// };
 struct generator {
-    struct var var;
-    struct node_prog m_prog;
-    char m_output[4096];
-    /* Stack Pointer at compile time */
-    size_t m_stack_size;
-    /* Track variable's positions in stack */
-    struct unordered_map m_vars;
+    struct node_prog m_prog; /* prog from `struct parser` */
+    char m_output[4096]; /* stringstream to emit assembly code */
+    size_t m_stack_size; /* Stack Pointer at compile time */
+
+    // struct var var;
+    // struct unordered_map m_vars; /* Track variable's positions in stack */
 };
 
-// PRIVATE---------------------------------------------------------------------
+// —————————————————————————————————————————————————————————————————————————————————————
+// PRIVATE
 
 static void g_push(struct generator *self, const char *reg)
 {
@@ -61,37 +52,80 @@ static void g_pop(struct generator *self, const char *reg)
     self->m_stack_size++;
 };
 
-// PUBLIC----------------------------------------------------------------------
+// —————————————————————————————————————————————————————————————————————————————————————
+// PUBLIC
 
 struct generator g_init(struct node_prog *prog)
 {
     struct generator self;
     memset(&self, 0, sizeof(struct generator));
-    self.m_prog
-        = *prog; // TODO: dup memory here to make m_prog static with const
+
+    self.m_prog = *prog;
+    self.m_stack_size = 0;
+    self.m_output[0] = '\0';
 
     return self;
 }
 
-void g_gen_expr() {};
-void g_gen_stmt(struct generator *self, const struct node_stmt stmt) {};
+void g_gen_expr(struct generator *self, const struct node_expr *expr)
+{
+    switch (expr->type) {
+    case EXPR_INT_LIT:
+        strcat(self->m_output, "    mov rax, ");
+        strcat(self->m_output, expr->var.int_lit.value);
+        strcat(self->m_output, "\n");
+        g_push(self, "rax");
+        break;
+    case EXPR_IDENT:
+        strcat(self->m_output, "    mov rax, ");
+        strcat(self->m_output, expr->var.ident.value);
+        strcat(self->m_output, "\n");
+        g_push(self, "rax");
+        break;
+    case EXPR_INVALID:
+        break;
+    }
+};
+
+void g_gen_stmt(struct generator *self, const struct node_stmt *stmt)
+{
+    switch (stmt->type) {
+    case STMT_EXIT:
+        g_gen_expr(self, &stmt->var.exit_expr);
+        strcat(self->m_output, "    mov rax, 60\n");
+        strcat(self->m_output, "    pop rdi\n"); // expr can be 2 things
+        strcat(self->m_output, "    syscall\n");
+        break;
+    case STMT_LET:
+        // TODO:
+        break;
+    case STMT_INVALID:
+        break;
+    }
+};
 
 char *g_gen_prog(struct generator *self)
 {
     const char *asm_header = "global _start\n_start:\n";
-    sprintf((self->m_output + strlen(self->m_output)), "%s", asm_header);
+    strcat(self->m_output, asm_header);
 
-    for (size_t i = 0, n = self->m_prog.stmt_count; i < n; i++)
-        g_gen_stmt(self, self->m_prog.stmts[i]);
+    for (size_t i = 0, n = self->m_prog.stmt_count; i < n; i++) {
+        g_gen_stmt(self, &self->m_prog.stmts[i]);
+    }
 
-    /* If no explicit `exit()`, exit with 0, else this is unreachable in ASM. */
+    /*
+     * If no explicit `exit()`, exit with 0,
+     * else this is unreachable in ASM.
+     */
     strcat(self->m_output, "    mov rax, 60\n"); /* 60: exit symbol */
     strcat(self->m_output, "    mov rdi, 0\n"); /* 0: exit code */
     strcat(self->m_output, "    syscall\n"); /* call the kernel to execute */
+
     return self->m_output;
 };
 
-// ----------------------------------------------------------------------------
+// —————————————————————————————————————————————————————————————————————————————————————
+// EOF
 
 /*
  * A buffer size of 24 characters accommodates both 32-bit and 64-bit
