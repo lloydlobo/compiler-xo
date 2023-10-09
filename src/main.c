@@ -64,73 +64,49 @@ int main(int argc, char *argv[])
     /* module::parser.c */
 
     struct parser *parser = p_init(tokens, mut_token_count);
-
     struct node_prog *prog = p_parse_prog(parser);
     if (prog == NULL)
         goto err_clean_parser_tokens;
-
-    if (prog != NULL) {
-        // Print the parsed prog
-        printf("Parsed prog:\n");
-        for (size_t i = 0; i < prog->stmt_count; i++) {
-            struct node_stmt stmt = prog->stmts[i];
-            if (stmt.type == STMT_EXIT) {
-                printf(
-                    "Exit Statement with code: %s\n",
-                    stmt.var.exit_expr.var.int_lit.value);
-            }
-            else if (stmt.type == STMT_LET) {
-                printf(
-                    "Let Statement: %s = %s\n",
-                    stmt.var.let_expr.ident.value,
-                    stmt.var.let_expr.expr.var.int_lit.value);
-            }
-        }
-
-        // Free memory allocated for the prog
-        free(prog->stmts);
-        free(prog);
-    }
-
-    int p_stmt_count = prog->stmt_count;
-
+    p_node_prog_print(prog);
     p_free(parser);
     token_free_tokens(tokens, mut_token_count);
 
     /* module::generator.c */
 
-    // struct generator *generator = generator_init(prog);
-    // parser_free_prog(prog);
-    // char *output_asm = generator_generate_prog(generator);
-    // if (output_asm == NULL)
-    //     goto err_clean_generator;
+    struct generator generator = g_init(prog);
+    char *output_asm = g_gen_prog(&generator);
     // generator_free(generator);
-    // {
-    //     printf("Generated Assembly Code:\n%s\n", output_asm);
-    //     FILE *file_out_asm = fopen("out.asm", "w");
-    //     if (file_out_asm == NULL)
-    //         goto err_clean_output_asm;
-    //     fputs(output_asm, file_out_asm);
-    //     fclose(file_out_asm);
-    // }
-    // free(output_asm);
+    if (prog->stmts != NULL)
+        free(prog->stmts);
+    free(prog);
+    if (output_asm == NULL)
+        goto err_clean_generator;
+
+    {
+        printf("Generated Assembly Code:\n%s\n", output_asm);
+        FILE *file_out_asm = fopen("out.asm", "w");
+        if (file_out_asm == NULL)
+            goto err_clean_file_out_asm_output_asm;
+        fputs(output_asm, file_out_asm);
+        fclose(file_out_asm);
+        // free(output_asm);
+    }
 
     /* assemble and... link the assembly code */
-
     system("nasm -felf64 out.asm");
     system("ld out.o -o out");
 
     return EXIT_SUCCESS;
 
-    // err_clean_output_asm:
-    //     perror("Could not open/create asm output file\n");
-    //     free(output_asm);
-    //     return EXIT_FAILURE;
-    //
-    // err_clean_generator:
-    //     perror("Could not generate assembly output\n");
-    //     generator_free(generator);
-    //     return EXIT_FAILURE;
+err_clean_file_out_asm_output_asm:
+    perror("Could not open/create asm output file\n");
+    free(output_asm);
+    return EXIT_FAILURE;
+
+err_clean_generator:
+    perror("Could not generate assembly output\n");
+    // generator_free(generator);
+    return EXIT_FAILURE;
 
 err_clean_parser_tokens:
     fprintf(stderr, "--%d-- Invalid program\n", __LINE__);

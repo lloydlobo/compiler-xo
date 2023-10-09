@@ -277,4 +277,24 @@ static int run_main()
     return 0;
 }
 
+/* Print the parsed prog */
+void p_node_prog_print(struct node_prog *self)
+{
+    printf("Parsed prog:\n");
+    for (size_t i = 0; i < self->stmt_count; i++) {
+        struct node_stmt stmt = self->stmts[i];
+        if (stmt.type == STMT_EXIT) {
+            printf(
+                "Exit Statement with code: %s\n",
+                stmt.var.exit_expr.var.int_lit.value);
+        }
+        else if (stmt.type == STMT_LET) {
+            printf(
+                "Let Statement: %s = %s\n",
+                stmt.var.let_expr.ident.value,
+                stmt.var.let_expr.expr.var.int_lit.value);
+        }
+    }
+}
+
 #endif /* DC6E0D4D_9AB8_4772_A498_BCCAE04F1B00 */
