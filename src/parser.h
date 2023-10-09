@@ -32,11 +32,11 @@ enum NodeStmtType {
 struct node_stmt {
     enum NodeStmtType type;
     union {
-        struct node_expr exit_expr;
+        struct node_expr stmt_exit;
         struct {
             struct token ident;
             struct node_expr expr;
-        } let_expr;
+        } stmt_let;
     } var;
 };
 
@@ -51,6 +51,9 @@ struct parser {
     size_t m_index;
 };
 
+// —————————————————————————————————————————————————————————————————————————————————————
+// PRIVATE
+
 static struct token *p_peek(const struct parser *self, int offset)
 {
     if (self->m_index + offset >= self->m_token_count)
@@ -62,6 +65,9 @@ static struct token *p_consume(struct parser *self)
 {
     return &self->m_tokens[(self->m_index)++];
 }
+
+// —————————————————————————————————————————————————————————————————————————————————————
+// PUBLIC
 
 struct parser *p_init(struct token *tokens, const size_t token_count)
 {
@@ -84,28 +90,30 @@ struct parser *p_init(struct token *tokens, const size_t token_count)
 
 void p_free(struct parser *self)
 {
-    free(self);
+    if (self != NULL)
+        free(self);
 }
 
-// -----------------------------------------------
 struct node_expr p_parse_expr(struct parser *self)
 {
     struct node_expr expr;
-    if (p_peek(self, 0) != NULL) {
-        if (p_peek(self, 0)->type == TINT_LIT) {
-            expr.type = EXPR_INT_LIT;
-            expr.var.int_lit = *p_consume(self);
-        }
-        else if (p_peek(self, 0)->type == TIDENT) {
-            expr.type = EXPR_IDENT;
-            expr.var.ident = *p_consume(self);
-        }
-        else {
-            expr.type = -1; // Invalid expression
-        }
+    struct token *t0 = p_peek(self, 0);
+    if (t0 == NULL) {
+        expr.type = EXPR_INVALID;
+        return expr;
     }
-    else {
-        expr.type = -1; // Invalid expression
+    switch (t0->type) {
+    case TINT_LIT:
+        expr.type = EXPR_INT_LIT;
+        expr.var.int_lit = *p_consume(self);
+        break;
+    case TIDENT:
+        expr.type = EXPR_IDENT;
+        expr.var.ident = *p_consume(self);
+        break;
+    default:
+        expr.type = EXPR_INVALID;
+        break;
     }
     return expr;
 }
@@ -113,33 +121,32 @@ struct node_expr p_parse_expr(struct parser *self)
 struct node_stmt p_parse_stmt(struct parser *self)
 {
     struct node_stmt stmt;
+
     if (p_peek(self, 0)->type == TEXIT && p_peek(self, 1) != NULL
         && p_peek(self, 1)->type == TPAREN_OPEN) {
-        p_consume(self);
-        p_consume(self);
-
+        assert(p_consume(self)->type == TEXIT);
+        assert(p_consume(self)->type == TPAREN_OPEN);
         struct node_expr node_expr = p_parse_expr(self);
-        if (node_expr.type != -1) {
+        if (node_expr.type != EXPR_INVALID) {
             stmt.type = STMT_EXIT;
-            stmt.var.exit_expr = node_expr;
+            stmt.var.stmt_exit = node_expr;
         }
         else {
-            fprintf(stderr, "[%d]: error: Invalid expression\n", __LINE__);
+            fprintf(stderr, "error: Invalid expression\n");
             goto fail;
         }
-
         if (p_peek(self, 0) != NULL && p_peek(self, 0)->type == TPAREN_CLOSE) {
             p_consume(self);
         }
         else {
-            fprintf(stderr, "[ERROR] Expected `)`\n");
+            fprintf(stderr, "error: Expected `)`\n");
             goto fail;
         }
         if (p_peek(self, 0) != NULL && p_peek(self, 0)->type == TSEMICOLON) {
             p_consume(self);
         }
         else {
-            fprintf(stderr, "[ERROR] Expected `;`\n");
+            fprintf(stderr, "error: Expected `;`\n");
             goto fail;
         }
     }
@@ -147,39 +154,36 @@ struct node_stmt p_parse_stmt(struct parser *self)
         p_peek(self, 0) != NULL && p_peek(self, 0)->type == TLET
         && p_peek(self, 1) != NULL && p_peek(self, 1)->type == TIDENT
         && p_peek(self, 2) != NULL && p_peek(self, 2)->type == TEQUAL) {
-        p_consume(self);
-
-        struct node_stmt stmt;
+        assert(p_consume(self)->type == TLET);
         stmt.type = STMT_LET;
-        stmt.var.let_expr.ident = *p_consume(self);
+        stmt.var.stmt_let.ident = *p_consume(self);
+        assert(p_consume(self)->type == TEQUAL);
 
-        p_consume(self);
-
-        struct node_expr expr = p_parse_expr(self);
-        if (expr.type != -1) {
-            stmt.var.let_expr.expr = expr;
+        struct node_expr nexpr = p_parse_expr(self);
+        if (nexpr.type != EXPR_INVALID) {
+            stmt.var.stmt_let.expr = nexpr;
         }
         else {
-            fprintf(stderr, "[%d]: error: Invalid expression\n", __LINE__);
+            fprintf(stderr, "error: Invalid expression\n");
             goto fail;
         }
-
         if (p_peek(self, 0) != NULL && p_peek(self, 0)->type == TSEMICOLON) {
             p_consume(self);
         }
         else {
-            fprintf(stderr, "[ERROR] Expected `;`\n");
+            fprintf(stderr, "error: Expected `;`\n");
             goto fail;
         }
     }
     else {
-        stmt.type = -1; // Invalid statement
+        perror("Syntax error\n");
+        stmt.type = STMT_INVALID;
     }
 
     return stmt;
 
 fail:
-    perror("[ERROR] Parser stmt\n");
+    perror("error: Failed to parse statements\n");
     exit(EXIT_FAILURE);
 }
 
@@ -187,53 +191,61 @@ struct node_prog *p_parse_prog(struct parser *self)
 {
     struct node_prog *p = malloc(sizeof(struct node_prog));
     if (p == NULL) {
-        perror("Failed to allocate memory for program");
+        fprintf(stderr, "error: Failed to allocate memory for program\n");
         return NULL;
     }
     p->stmt_count = 0;
-    p->stmts = NULL;
-    p->stmts
-        = malloc(10 * sizeof(struct node_stmt)); // Use malloc here, not calloc
+    p->stmts = malloc(10 * sizeof(struct node_stmt));
     if (p->stmts == NULL) {
-        perror("Failed to allocate memory for stmts");
-        free(p);
-        return NULL;
+        fprintf(stderr, "error: Failed to allocate memory for stmts\n");
+        goto err_cleanup;
     }
-    unsigned long n_loop_limit = 50;
-    while (self->m_index < self->m_token_count) {
-        if (n_loop_limit <= 0) {
-            break;
-        }
+
+    while (p_peek(self, 0) != NULL) {
         struct node_stmt stmt = p_parse_stmt(self);
-        if (stmt.type == -1) {
-            int count_stmts = p->stmt_count;
-            printf("count: %d\n", count_stmts);
-            free(p->stmts);
-            free(p);
-            return NULL;
+        if (stmt.type == STMT_INVALID) {
+            fprintf(stderr, "error: Invalid statement\n");
+            goto err_cleanup;
         }
         p->stmt_count++;
         p->stmts = realloc(p->stmts, p->stmt_count * sizeof(struct node_stmt));
         if (p->stmts == NULL) {
-            fprintf(stderr, "Failed to reallocate memory\n");
-            free(p->stmts);
-            free(p);
-            return NULL;
+            fprintf(stderr, "error: Failed to reallocate memory\n");
+            goto err_cleanup;
         }
-        if (stmt.type >= 0) {
-            p->stmts[p->stmt_count - 1] = stmt;
-        }
-        else {
-            fprintf(stderr, "[%d]: error: Invalid statement\n", __LINE__);
-            free(p->stmts);
-            free(p);
-            return NULL;
-        }
-        n_loop_limit--;
+        p->stmts[p->stmt_count - 1] = stmt;
     }
-
     return p;
+
+err_cleanup:
+    if (p->stmts != NULL)
+        free(p->stmts);
+    free(p);
+    return NULL;
 }
+
+/* Print the parsed prog */
+void p_node_prog_print(struct node_prog *self)
+{
+    printf("Parsed prog:\n");
+    for (size_t i = 0; i < self->stmt_count; i++) {
+        struct node_stmt stmt = self->stmts[i];
+        if (stmt.type == STMT_EXIT) {
+            printf(
+                "Exit Statement with code: %s\n",
+                stmt.var.stmt_exit.var.int_lit.value);
+        }
+        else if (stmt.type == STMT_LET) {
+            printf(
+                "Let Statement: %s = %s\n",
+                stmt.var.stmt_let.ident.value,
+                stmt.var.stmt_let.expr.var.int_lit.value);
+        }
+    }
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————
+// Test
 
 static int run_main()
 {
@@ -258,13 +270,13 @@ static int run_main()
             if (stmt.type == STMT_EXIT) {
                 printf(
                     "Exit Statement with code: %s\n",
-                    stmt.var.exit_expr.var.int_lit.value);
+                    stmt.var.stmt_exit.var.int_lit.value);
             }
             else if (stmt.type == STMT_LET) {
                 printf(
                     "Let Statement: %s = %s\n",
-                    stmt.var.let_expr.ident.value,
-                    stmt.var.let_expr.expr.var.int_lit.value);
+                    stmt.var.stmt_let.ident.value,
+                    stmt.var.stmt_let.expr.var.int_lit.value);
             }
         }
 
@@ -277,26 +289,6 @@ static int run_main()
     p_free(p);
 
     return 0;
-}
-
-/* Print the parsed prog */
-void p_node_prog_print(struct node_prog *self)
-{
-    printf("Parsed prog:\n");
-    for (size_t i = 0; i < self->stmt_count; i++) {
-        struct node_stmt stmt = self->stmts[i];
-        if (stmt.type == STMT_EXIT) {
-            printf(
-                "Exit Statement with code: %s\n",
-                stmt.var.exit_expr.var.int_lit.value);
-        }
-        else if (stmt.type == STMT_LET) {
-            printf(
-                "Let Statement: %s = %s\n",
-                stmt.var.let_expr.ident.value,
-                stmt.var.let_expr.expr.var.int_lit.value);
-        }
-    }
 }
 
 #endif /* DC6E0D4D_9AB8_4772_A498_BCCAE04F1B00 */
