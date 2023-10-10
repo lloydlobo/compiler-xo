@@ -1,61 +1,60 @@
 #ifndef A4541063_3A62_433A_A60C_275D5EB0263C
 #define A4541063_3A62_433A_A60C_275D5EB0263C
 
+#include "hashtable.h"
 #include "parser.h"
+#include "xolib.h"
+
+#include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-struct var {
+#define INITIAL_HASHTABLE_SIZE 100 // count assigned to `size_t m_size_m_vars`
+
+#define MAX_ASM_LINE_SIZE 80 // 24 => e.g. "    mov rax, 60\n"
+#define BIT_MULTIPLIER 8
+#define OFF_BY_ONE 1
+
+struct g_var {
     size_t stack_loc;
     // ... include more types for static typing
-};
-
-struct unordered_map {
-    char *key;
-    struct var var;
 };
 
 /**
  * generator
  *
- * stack size: move around the entity offset of the penultimate item.
- *   Due to Limited numbers of registers wants us to utilize the Stack
- *   Copy something and add it to top of stack..
  */
 struct generator {
-    struct node_prog m_prog; /* prog from `struct parser` */
-    char m_output[4096]; /* stringstream to emit assembly code */
-    size_t m_stack_size; /* Stack Pointer at compile time */
-
-    // struct var var;
-    // struct unordered_map m_vars; /* Track variable's positions in stack */
+    /* node prog from `struct parser` */
+    struct node_prog m_prog;
+    /* stringstream to emit assembly code */
+    char m_output[4096];
+    /*
+     * Stack Pointer at compile time: * move around the entity offset of the
+     * penultimate item. Due to Limited numbers of registers wants us to
+     * utilize the Stack. Copy something and add it to top of stack.
+     */
+    size_t m_stack_size;
+    /* Current size/count of the hash table */
+    size_t m_vars_size;
+    /*
+     * Track variable's positions in stack
+     * signature: `hashtable::<char *key, struct g_var **value>`
+     */
+    struct hashtable m_vars;
 };
 
-// —————————————————————————————————————————————————————————————————————————————————————
-// PRIVATE
-
-static void g_push(struct generator *self, const char *reg)
-{
-    strcat(self->m_output, "    push ");
-    strcat(self->m_output, reg);
-    strcat(self->m_output, "\n");
-    self->m_stack_size--;
-};
-
-static void g_pop(struct generator *self, const char *reg)
-{
-    strcat(self->m_output, "    pop ");
-    strcat(self->m_output, reg);
-    strcat(self->m_output, "\n");
-    self->m_stack_size++;
-};
+static void g_push(struct generator *self, const char *reg);
+static void g_pop(struct generator *self, const char *reg);
 
 // —————————————————————————————————————————————————————————————————————————————————————
 // PUBLIC
 
-struct generator g_init(struct node_prog *prog)
+// PERF: use tokens count in main.c to set `self.m_size_m_vars`
+struct generator g_init(const struct node_prog *prog
+                        /*, const size_t token_count */)
 {
     struct generator self;
     memset(&self, 0, sizeof(struct generator));
@@ -63,60 +62,96 @@ struct generator g_init(struct node_prog *prog)
     self.m_prog = *prog;
     self.m_stack_size = 0;
     self.m_output[0] = '\0';
+    self.m_vars_size = INITIAL_HASHTABLE_SIZE;
+    self.m_vars = *hashtable_init(self.m_vars_size);
 
     return self;
 }
 
 void g_gen_expr(struct generator *self, const struct node_expr *expr)
-{
-    switch (expr->type) {
-    case EXPR_INT_LIT:
+{ // printf("in gen_expr: %s\n", dbg_ident_val);
+    char *const dbg_ident_val = expr->var.ident.value;
+    if (expr->type == EXPR_INT_LIT) { // printf("in expr int_lit\n");
         strcat(self->m_output, "    mov rax, ");
         strcat(self->m_output, expr->var.int_lit.value);
         strcat(self->m_output, "\n");
         g_push(self, "rax");
-        break;
-    case EXPR_IDENT:
-        strcat(self->m_output, "    mov rax, ");
-        strcat(self->m_output, expr->var.ident.value);
-        strcat(self->m_output, "\n");
-        g_push(self, "rax");
-        break;
-    case EXPR_INVALID:
-        break;
     }
+    else if (expr->type == EXPR_IDENT) {
+        char *const ident_val = expr->var.ident.value;
+        err_t err_found = hashtable_contains(&self->m_vars, ident_val);
+        if (err_found != ErrOk) {
+            assert(err_found != ErrInvalid && "Unreachable if not invalid");
+            fprintf(stderr, "error: Undeclared identifier: %s\n", ident_val);
+            goto fail;
+        }
+        struct g_var *var;
+        err_t err_get = hashtable_get(&self->m_vars, ident_val, (void **)&var);
+        if (err_get != ErrOk) {
+            fprintf(stderr, "error: %s: %s\n", err_str(err_get), ident_val);
+            goto fail;
+        }
+        char offset[MAX_ASM_LINE_SIZE];
+        offset[0] = '\0';
+        size_t offset_idx = (self->m_stack_size - var->stack_loc - OFF_BY_ONE)
+            * BIT_MULTIPLIER; // clang-format off
+        strcat(offset,           "QWORD [rsp + ");
+        sprintf((offset + strlen(offset)), "%zu", offset_idx);
+        strcat(offset,                         "]\n");
+        g_push(self, offset); // clang-format on
+    }
+
+fail:
+    fprintf(stderr, "%d: error: Failed to generate expression\n", __LINE__);
+    return;
 };
 
 void g_gen_stmt(struct generator *self, const struct node_stmt *stmt)
 {
-    switch (stmt->type) {
-    case STMT_EXIT:
-        g_gen_expr(self, &stmt->var.exit_expr);
+    if (stmt->type == STMT_EXIT) {
+        g_gen_expr(self, &stmt->var.expr_exit);
         strcat(self->m_output, "    mov rax, 60\n");
-        strcat(self->m_output, "    pop rdi\n"); // expr can be 2 things
+        g_pop(self, "rdi");
         strcat(self->m_output, "    syscall\n");
-        break;
-    case STMT_LET:
-        // TODO:
-        break;
-    case STMT_INVALID:
-        break;
     }
-};
+    else if (stmt->type == STMT_LET) {
+        const char *ident_val = stmt->var.expr_let.ident.value;
+        err_t err = hashtable_contains(&self->m_vars, ident_val);
+        if (err == ErrOk) {
+            fprintf(stderr, "error: Identifier already used: %s\n", ident_val);
+            goto fail;
+        }
+        assert(err == ErrNotFound && "stmt ident_val key maybe invalid");
+
+        char *const key = stmt->var.expr_let.ident.value;
+        struct g_var val = (struct g_var) { .stack_loc = self->m_stack_size };
+
+        err = hashtable_insert(&self->m_vars, key, &val);
+        if (err != ErrOk) {
+            fprintf(stderr, "error: %s: in hashtable_insert\n", err_str(err));
+            goto fail;
+        }
+        printf("%s\n", err_str(err));
+
+        g_gen_expr(self, &stmt->var.expr_let.expr);
+    }
+    else if (stmt->type == STMT_INVALID) {
+        fprintf(stderr, "error: Invalid statement");
+        goto fail;
+    }
+
+fail:
+    fprintf(stderr, "%d: error: Failed to generate statement\n", __LINE__);
+}
 
 char *g_gen_prog(struct generator *self)
 {
-    const char *asm_header = "global _start\n_start:\n";
-    strcat(self->m_output, asm_header);
+    strcat(self->m_output, "global _start\n_start:\n");
 
     for (size_t i = 0, n = self->m_prog.stmt_count; i < n; i++) {
         g_gen_stmt(self, &self->m_prog.stmts[i]);
     }
 
-    /*
-     * If no explicit `exit()`, exit with 0,
-     * else this is unreachable in ASM.
-     */
     strcat(self->m_output, "    mov rax, 60\n"); /* 60: exit symbol */
     strcat(self->m_output, "    mov rdi, 0\n"); /* 0: exit code */
     strcat(self->m_output, "    syscall\n"); /* call the kernel to execute */
@@ -125,47 +160,24 @@ char *g_gen_prog(struct generator *self)
 };
 
 // —————————————————————————————————————————————————————————————————————————————————————
-// EOF
+// PRIVATE
 
-/*
- * A buffer size of 24 characters accommodates both 32-bit and 64-bit
- * hexadecimal addresses comfortably. For example, "0xdeadbeef" (32-bit) and
- * "0xdeadbeefdeadbeef" (64-bit) can fit.
- * - `push 0xdeadbeef` is 15 characters long. `pop 0xdeadbeefdeadbeef` is 20
- * characters long. */
-// const size_t MAX_BUF_SIZE = 24;
-// static void g_push(struct generator *self, const char *reg) {
-// char buf[MAX_BUF_SIZE];
-// const char *asm_push = "    push ";
-// int chars_written = snprintf(buf, sizeof(buf), "%s%s\n", asm_push, reg);
-// if (chars_written < 0 || chars_written >= sizeof(buf)) {
-//     fprintf(stderr, "Error formatting output for register %s\n", reg);
-//     exit(EXIT_FAILURE); }
-// self->m_output[self->m_stack_size] = strdup(buf);
-// if (self->m_output[self->m_stack_size] == NULL) {
-//     perror("Error allocating memory for output buffer");
-//     exit(EXIT_FAILURE); }
-// self->m_stack_size--;
-//};
+static void g_push(struct generator *self, const char *reg)
+{ // printf("push: before: stack_size: %zu\n", self->m_stack_size);
+    strcat(self->m_output, "    push ");
+    strcat(self->m_output, reg);
+    strcat(self->m_output, "\n");
+    self->m_stack_size++; // printf("push: after: stack_size: %zu\n",
+                          // self->m_stack_size);
+};
 
-/*
- * [Source](https://github.com/Wilfred/babyc/blob/0206e3a1c435f9cdf37b5ffbc3a05c522db5cda7/assembly.c#L256C32-L256C32)
- */
-/*
-void write_assembly(Syntax *syntax)
-{
-    FILE *out = fopen("out.s", "wb");
-
-    write_header(out);
-
-    Context *ctx = new_context();
-
-    write_syntax(out, syntax, ctx);
-    write_footer(out);
-
-    context_free(ctx);
-    fclose(out);
-}
-*/
+static void g_pop(struct generator *self, const char *reg)
+{ // printf("pop: before: stack_size: %zu\n", self->m_stack_size);
+    strcat(self->m_output, "    pop ");
+    strcat(self->m_output, reg);
+    strcat(self->m_output, "\n");
+    self->m_stack_size--; // printf("pop: after: stack_size: %zu\n",
+                          // self->m_stack_size);
+};
 
 #endif /* A4541063_3A62_433A_A60C_275D5EB0263C */

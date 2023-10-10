@@ -32,11 +32,11 @@ enum NodeStmtType {
 struct node_stmt {
     enum NodeStmtType type;
     union {
-        struct node_expr stmt_exit;
+        struct node_expr expr_exit;
         struct {
             struct token ident;
             struct node_expr expr;
-        } stmt_let;
+        } expr_let;
     } var;
 };
 
@@ -96,26 +96,17 @@ void p_free(struct parser *self)
 
 struct node_expr p_parse_expr(struct parser *self)
 {
-    struct node_expr expr;
-    struct token *t0 = p_peek(self, 0);
-    if (t0 == NULL) {
-        expr.type = EXPR_INVALID;
-        return expr;
+    if (p_peek(self, 0) != NULL && p_peek(self, 0)->type == TINT_LIT) {
+        return (struct node_expr) { .type = EXPR_INT_LIT,
+                                    .var.int_lit = *p_consume(self) };
     }
-    switch (t0->type) {
-    case TINT_LIT:
-        expr.type = EXPR_INT_LIT;
-        expr.var.int_lit = *p_consume(self);
-        break;
-    case TIDENT:
-        expr.type = EXPR_IDENT;
-        expr.var.ident = *p_consume(self);
-        break;
-    default:
-        expr.type = EXPR_INVALID;
-        break;
+    else if (p_peek(self, 0) != NULL && p_peek(self, 0)->type == TIDENT) {
+        return (struct node_expr) { .type = EXPR_IDENT,
+                                    .var.ident = *p_consume(self) };
     }
-    return expr;
+    else {
+        return (struct node_expr) { .type = EXPR_INVALID };
+    }
 }
 
 struct node_stmt p_parse_stmt(struct parser *self)
@@ -129,7 +120,7 @@ struct node_stmt p_parse_stmt(struct parser *self)
         struct node_expr node_expr = p_parse_expr(self);
         if (node_expr.type != EXPR_INVALID) {
             stmt.type = STMT_EXIT;
-            stmt.var.stmt_exit = node_expr;
+            stmt.var.expr_exit = node_expr;
         }
         else {
             fprintf(stderr, "error: Invalid expression\n");
@@ -156,12 +147,12 @@ struct node_stmt p_parse_stmt(struct parser *self)
         && p_peek(self, 2) != NULL && p_peek(self, 2)->type == TEQUAL) {
         assert(p_consume(self)->type == TLET);
         stmt.type = STMT_LET;
-        stmt.var.stmt_let.ident = *p_consume(self);
+        stmt.var.expr_let.ident = *p_consume(self);
         assert(p_consume(self)->type == TEQUAL);
 
         struct node_expr nexpr = p_parse_expr(self);
         if (nexpr.type != EXPR_INVALID) {
-            stmt.var.stmt_let.expr = nexpr;
+            stmt.var.expr_let.expr = nexpr;
         }
         else {
             fprintf(stderr, "error: Invalid expression\n");
@@ -233,13 +224,13 @@ void p_node_prog_print(struct node_prog *self)
         if (stmt.type == STMT_EXIT) {
             printf(
                 "Exit Statement with code: %s\n",
-                stmt.var.stmt_exit.var.int_lit.value);
+                stmt.var.expr_exit.var.int_lit.value);
         }
         else if (stmt.type == STMT_LET) {
             printf(
                 "Let Statement: %s = %s\n",
-                stmt.var.stmt_let.ident.value,
-                stmt.var.stmt_let.expr.var.int_lit.value);
+                stmt.var.expr_let.ident.value,
+                stmt.var.expr_let.expr.var.int_lit.value);
         }
     }
 }
@@ -270,13 +261,13 @@ static int run_main()
             if (stmt.type == STMT_EXIT) {
                 printf(
                     "Exit Statement with code: %s\n",
-                    stmt.var.stmt_exit.var.int_lit.value);
+                    stmt.var.expr_exit.var.int_lit.value);
             }
             else if (stmt.type == STMT_LET) {
                 printf(
                     "Let Statement: %s = %s\n",
-                    stmt.var.stmt_let.ident.value,
-                    stmt.var.stmt_let.expr.var.int_lit.value);
+                    stmt.var.expr_let.ident.value,
+                    stmt.var.expr_let.expr.var.int_lit.value);
             }
         }
 

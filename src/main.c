@@ -13,8 +13,10 @@
 #include <asm-generic/errno-base.h>
 
 #include "generator.h"
+#include "hashtable.h"
 #include "parser.h"
 #include "tokenizer.h"
+#include "xolib.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define sizeof_field(t, f) (sizeof(((t *)0)->f))
@@ -30,6 +32,11 @@ int main(int argc, char *argv[])
         fprintf(stderr, USAGE_MESSAGE);
         return EXIT_FAILURE;
     }
+
+    // if (true && "DEBUG") {
+    //     test__hash__table();
+    //     return EXIT_SUCCESS;
+    // }
 
     char *filename = argv[1]; // TODO: err if extension is not `.xo`
     FILE *input_file_xo = fopen(filename, "r");

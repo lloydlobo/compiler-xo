@@ -25,3 +25,4 @@ src/lib/output
 src/neoparser.h
 src/output
 src/comptime.h
+.vscode
