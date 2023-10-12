@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "err.h"
-#include "xolib.h"
+#include "lumlib.h"
 
 // TODO: #define LOAD_FACTOR_THRESHOLD 0.7 /* Factor for resizing hash table. */
 

@@ -1,10 +1,15 @@
-# xo lang: C Language Compiler
+# Lumina: Compiled with C
+
+"Lumina" implies illumination and clarity, which can be associated with
+the purpose of programming languages to make complex tasks more
+understandable and manageable.
+The `.lum` extension is short, sweet and easy to remember.
 
 ## Build
 
 ```shell
 cmake -S . -B build && cmake --build build
-./build/xo test.xo
+./build/lumina test.lum
 echo $?
 
 ./out
@@ -40,9 +45,11 @@ echo $?     # See exit code
 #### memory error detection with `valgrind`
 
 ```shell
-valgrind --track-origins=yes ./build/xo test.xo
+valgrind --track-origins=yes ./build/lumina test.lum
 ```
 
 ## Credits
 
-[orosmatthew/hydrogen-cpp](https://github.com/orosmatthew/hydrogen-cpp)
+Lumina is a C compiled language, built in the spirit of
+[Hydrogen](https://github.com/orosmatthew/hydrogen-cpp) language originally
+compiled with C++.

@@ -1,7 +1,8 @@
 /*
- *  compiler-xo/src/main.c
+ *  lumina/src/main.c
  */
 
+#include <asm-generic/errno-base.h>
 #include <assert.h>
 #include <ctype.h>
 #include <stdbool.h>
@@ -10,18 +11,50 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <asm-generic/errno-base.h>
-
 #include "generator.h"
 #include "hashtable.h"
+#include "lumlib.h"
 #include "parser.h"
+#include "print.h"
 #include "tokenizer.h"
-#include "xolib.h"
 
+#define OUT_ASM_FILENAME "out.asm"
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define sizeof_field(t, f) (sizeof(((t *)0)->f))
 
-#define USAGE_MESSAGE "Invalid usage. Correct usage is: ...\nxo <input.xo>\n"
+#define USAGE_MESSAGE \
+    "Invalid usage. Correct usage is: ...\nlumina <input.lum>\n"
+
+err_t parse_input_file_ext(const char *input, const char *expect_ext);
+
+/*
+     char *token;
+    token = strtok((char *)input, FILE_DELIM);
+
+    while (token != NULL) {
+        char *nxt = token;
+        token = strtok(NULL, FILE_DELIM);
+        if (token != NULL)
+            *name = nxt;
+        else
+            *ext = nxt;
+    }
+ */
+err_t parse_input_file_ext(const char *input, const char *expect_ext)
+{
+    if (input == NULL || expect_ext == NULL)
+        return ErrInvalid;
+
+    size_t input_len = strlen(input), ext_len = strlen(expect_ext);
+    if (input_len < ext_len + 1)
+        return ErrBadName;
+
+    const char *ext_check = input + (input_len - ext_len);
+    if (strcmp(ext_check, expect_ext) != 0)
+        return ErrBadfd;
+
+    return ErrOk;
+}
 
 /*
  * main entrypoint
@@ -33,33 +66,35 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    // if (true && "DEBUG") {
-    //     test__hash__table();
-    //     return EXIT_SUCCESS;
-    // }
-
-    char *filename = argv[1]; // TODO: err if extension is not `.xo`
-    FILE *input_file_xo = fopen(filename, "r");
-    if (input_file_xo == NULL) {
-        perror("Could not open input file\n");
+    const char *filename = argv[1];
+    const char *expect_ext = "lum";
+    err_t err = parse_input_file_ext(filename, expect_ext);
+    if (err != ErrOk) {
+        fprintf(stderr, "error: %s: Expected `<filename>.lum`\n", err_str(err));
+        return EXIT_FAILURE;
+    };
+    FILE *input_file_lum = fopen(filename, "r");
+    if (input_file_lum == NULL) {
+        perror("error: Could not open input file\n");
         return EXIT_FAILURE;
     }
-
-    fseek(input_file_xo, 0, SEEK_END);
-    long input_size = ftell(input_file_xo);
-    rewind(input_file_xo);
+    fseek(input_file_lum, 0, SEEK_END);
+    long input_size = ftell(input_file_lum);
+    rewind(input_file_lum);
 
     char contents[input_size + 1]; // +1 for the null terminator
     {
-        if (fread(&contents, sizeof(char), input_size, input_file_xo)
+        if (fread(&contents, sizeof(char), input_size, input_file_lum)
             != input_size) {
-            perror("Failed to read input file to buffer/n");
-            fclose(input_file_xo);
+            perror("error: Failed to read input file to buffer/n");
+            fclose(input_file_lum);
             return EXIT_FAILURE;
         }
         contents[input_size] = '\0';
-        fclose(input_file_xo);
+        fclose(input_file_lum);
     }
+
+    println("Hello, World from Lumina!");
 
     /* module::tokenizer.c */
 
@@ -94,7 +129,7 @@ int main(int argc, char *argv[])
 
     {
         printf("Generated Assembly Code:\n%s\n", output_asm);
-        FILE *file_out_asm = fopen("out.asm", "w");
+        FILE *file_out_asm = fopen(OUT_ASM_FILENAME, "w");
         if (file_out_asm == NULL)
             goto err_clean_file_out_asm_output_asm;
         fputs(output_asm, file_out_asm);
