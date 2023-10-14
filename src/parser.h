@@ -71,7 +71,7 @@ static struct token *p_consume(struct parser *self)
 
 struct parser *p_init(struct token *tokens, const size_t token_count)
 {
-    struct parser *self = malloc(sizeof(struct parser));
+    struct parser *self = (struct parser *)malloc(sizeof(struct parser));
     if (self == NULL) {
         perror("Failed to allocate memory for Parser\n");
         return NULL;
@@ -146,7 +146,7 @@ struct node_stmt p_parse_stmt(struct parser *self)
         && p_peek(self, 1) != NULL && p_peek(self, 1)->type == TIDENT
         && p_peek(self, 2) != NULL && p_peek(self, 2)->type == TEQUAL) {
         assert(p_consume(self)->type == TLET);
-        stmt.type = STMT_LET;
+        stmt.type = STMT_LET; // (let) `let x = 1;`
         stmt.var.expr_let.ident = *p_consume(self);
         assert(p_consume(self)->type == TEQUAL);
 
@@ -159,6 +159,34 @@ struct node_stmt p_parse_stmt(struct parser *self)
             goto fail;
         }
         if (p_peek(self, 0) != NULL && p_peek(self, 0)->type == TSEMICOLON) {
+            p_consume(self);
+        }
+        else {
+            fprintf(stderr, "error: Expected `;`\n");
+            goto fail;
+        }
+    }
+    else if (
+        p_peek(self, 0) != NULL
+        && (p_peek(self, 0)->type != TLET
+            && (p_peek(self, 1) != NULL && p_peek(self, 1)->type == TCOLON)
+            && (p_peek(self, 0) != NULL && p_peek(self, 2)->type == TEQUAL))) {
+        stmt.type = STMT_LET; // (walrus) `x := 1;`
+        stmt.var.expr_let.ident = *p_consume(self);
+
+        assert(p_consume(self)->type == TCOLON);
+        assert(p_consume(self)->type == TEQUAL);
+
+        struct node_expr nexpr = p_parse_expr(self);
+        if (nexpr.type != EXPR_INVALID) {
+            stmt.var.expr_let.expr = nexpr;
+        }
+        else {
+            fprintf(stderr, "error: Invalid expression\n");
+            goto fail;
+        }
+        if (p_peek(self, 0) != NULL
+            && p_peek(self, 0)->type == TSEMICOLON) { /* TODO \n without semi */
             p_consume(self);
         }
         else {
@@ -180,13 +208,13 @@ fail:
 
 struct node_prog *p_parse_prog(struct parser *self)
 {
-    struct node_prog *p = malloc(sizeof(struct node_prog));
+    struct node_prog *p = (struct node_prog *)malloc(sizeof(struct node_prog));
     if (p == NULL) {
         fprintf(stderr, "error: Failed to allocate memory for program\n");
         return NULL;
     }
     p->stmt_count = 0;
-    p->stmts = malloc(10 * sizeof(struct node_stmt));
+    p->stmts = (struct node_stmt *)malloc(10 * sizeof(struct node_stmt));
     if (p->stmts == NULL) {
         fprintf(stderr, "error: Failed to allocate memory for stmts\n");
         goto err_cleanup;
@@ -199,7 +227,8 @@ struct node_prog *p_parse_prog(struct parser *self)
             goto err_cleanup;
         }
         p->stmt_count++;
-        p->stmts = realloc(p->stmts, p->stmt_count * sizeof(struct node_stmt));
+        p->stmts = (struct node_stmt *)realloc(
+            p->stmts, p->stmt_count * sizeof(struct node_stmt));
         if (p->stmts == NULL) {
             fprintf(stderr, "error: Failed to reallocate memory\n");
             goto err_cleanup;

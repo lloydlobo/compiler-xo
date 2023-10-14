@@ -25,6 +25,7 @@ enum TokenType {
     TEXIT,
     TINT_LIT,
     TSEMICOLON,
+    TCOLON,
     TPAREN_OPEN,
     TPAREN_CLOSE,
     TCURLY_OPEN,
@@ -40,6 +41,7 @@ const char *tokentype_to_str(enum TokenType self)
         CASE_ENUM_TO_STR(TEXIT);
         CASE_ENUM_TO_STR(TINT_LIT);
         CASE_ENUM_TO_STR(TSEMICOLON);
+        CASE_ENUM_TO_STR(TCOLON);
         CASE_ENUM_TO_STR(TPAREN_OPEN);
         CASE_ENUM_TO_STR(TPAREN_CLOSE);
         CASE_ENUM_TO_STR(TCURLY_OPEN);
@@ -166,14 +168,13 @@ struct token *t_tokenize(struct tokenizer *self, int *token_count)
     }
 
     char buf[m_src_length + 1];
-    int offset = 0;
+    int ofst = 0;
     size_t i = 0;
 
-    while (t_peek(self, offset) != '\0') {
-        if (isalpha(t_peek(self, offset))) {
+    while (t_peek(self, ofst) != '\0') {
+        if (isalpha(t_peek(self, ofst))) {
             buf[i++] = t_consume(self);
-            while (t_peek(self, offset) != '\0'
-                   && isalnum(t_peek(self, offset))) {
+            while (t_peek(self, ofst) != '\0' && isalnum(t_peek(self, ofst))) {
                 buf[i++] = t_consume(self);
             }
             buf[i] = '\0'; // Null-terminate the token buffer
@@ -191,10 +192,9 @@ struct token *t_tokenize(struct tokenizer *self, int *token_count)
                 buf_clear(buf, &i);
             }
         }
-        else if (isdigit(t_peek(self, offset))) {
+        else if (isdigit(t_peek(self, ofst))) {
             buf[i++] = t_consume(self);
-            while (t_peek(self, offset) != '\0'
-                   && isdigit(t_peek(self, offset))) {
+            while (t_peek(self, ofst) != '\0' && isdigit(t_peek(self, ofst))) {
                 buf[i++] = t_consume(self);
             }
             buf[i] = '\0';
@@ -202,24 +202,32 @@ struct token *t_tokenize(struct tokenizer *self, int *token_count)
              = (struct token) { .type = TINT_LIT, .value = strdup(buf) });
             buf_clear(buf, &i);
         }
-        else if (t_peek(self, offset) == '(') {
+        else if (t_peek(self, ofst) == '(') {
             t_consume(self);
             (tokens[(*token_count)++] = (struct token) { .type = TPAREN_OPEN });
         }
-        else if (t_peek(self, offset) == ')') {
+        else if (t_peek(self, ofst) == ')') {
             t_consume(self);
             (tokens[(*token_count)++]
              = (struct token) { .type = TPAREN_CLOSE });
         }
-        else if (t_peek(self, offset) == ';') {
+        // else if (t_peek(self, offset) == ';') {
+        else if (t_peek(self, ofst) == '\n') {
             t_consume(self);
             tokens[(*token_count)++] = (struct token) { .type = TSEMICOLON };
+            while (t_peek(self, ofst) == '\n') {
+                t_consume(self);
+            }
         }
-        else if (t_peek(self, offset) == '=') {
+        else if (t_peek(self, ofst) == ':') {
+            t_consume(self);
+            (tokens[(*token_count)++] = (struct token) { .type = TCOLON });
+        }
+        else if (t_peek(self, ofst) == '=') {
             t_consume(self);
             (tokens[(*token_count)++] = (struct token) { .type = TEQUAL });
         }
-        else if (isspace(t_peek(self, offset))) {
+        else if (isspace(t_peek(self, ofst))) {
             t_consume(self);
         }
         else {

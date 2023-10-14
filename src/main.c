@@ -52,9 +52,6 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    test__array();
-    return EXIT_FAILURE;
-
     const char *filename = argv[1];
     const char *expect_ext = "lum";
     err_t err = parse_input_file_ext(filename, expect_ext);
