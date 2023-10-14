@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "array.h"
 #include "generator.h"
 #include "hashtable.h"
 #include "lumlib.h"
@@ -27,28 +28,13 @@
 
 err_t parse_input_file_ext(const char *input, const char *expect_ext);
 
-/*
-     char *token;
-    token = strtok((char *)input, FILE_DELIM);
-
-    while (token != NULL) {
-        char *nxt = token;
-        token = strtok(NULL, FILE_DELIM);
-        if (token != NULL)
-            *name = nxt;
-        else
-            *ext = nxt;
-    }
- */
 err_t parse_input_file_ext(const char *input, const char *expect_ext)
 {
     if (input == NULL || expect_ext == NULL)
         return ErrInvalid;
-
     size_t input_len = strlen(input), ext_len = strlen(expect_ext);
     if (input_len < ext_len + 1)
         return ErrBadName;
-
     const char *ext_check = input + (input_len - ext_len);
     if (strcmp(ext_check, expect_ext) != 0)
         return ErrBadfd;
@@ -65,6 +51,9 @@ int main(int argc, char *argv[])
         fprintf(stderr, USAGE_MESSAGE);
         return EXIT_FAILURE;
     }
+
+    test__array();
+    return EXIT_FAILURE;
 
     const char *filename = argv[1];
     const char *expect_ext = "lum";

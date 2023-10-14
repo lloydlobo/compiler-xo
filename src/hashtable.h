@@ -42,7 +42,8 @@ static unsigned int hash_prime(const char *key, size_t size);
 
 struct hashtable *hashtable_init(size_t size)
 {
-    struct hashtable *self = malloc(sizeof(struct hashtable));
+    struct hashtable *self
+        = (struct hashtable *)malloc(sizeof(struct hashtable));
     if (self == NULL) {
         fprintf(stderr, "error: %s: in hash table", err_str(ErrNoMem));
         return NULL;
@@ -69,6 +70,7 @@ err_t hashtable_insert(struct hashtable *self, const char *key, void *value)
 
     unsigned int index = hash_prime(key, self->size);
 
+    // FIXME: Is the value from caller have pre-allocated memory?
     struct keyval *keyval = keyval_init(key, value);
     if (keyval == NULL) {
         fprintf(stderr, "error: Failed to create key value pair");
@@ -230,7 +232,7 @@ int test__hash__table()
 
     int int_value = 5;
     double double_value = 3.14;
-    char *string_value = "Hello, World!";
+    char *string_value = "Hello, World!"; // on the stack
 
     if (hashtable_insert(ht, "integer", &int_value) != ErrOk
         || hashtable_insert(ht, "double", &double_value) != ErrOk
