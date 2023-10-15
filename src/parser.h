@@ -25,7 +25,8 @@ struct node_expr {
 
 enum NodeStmtType {
     STMT_EXIT,
-    STMT_LET,
+    STMT_LET_MUT,
+    STMT_LET_IMUT,
     STMT_INVALID = -1,
 };
 
@@ -146,7 +147,7 @@ struct node_stmt p_parse_stmt(struct parser *self)
         && p_peek(self, 1) != NULL && p_peek(self, 1)->type == TIDENT
         && p_peek(self, 2) != NULL && p_peek(self, 2)->type == TEQUAL) {
         assert(p_consume(self)->type == TLET);
-        stmt.type = STMT_LET; // (let) `let x = 1;`
+        stmt.type = STMT_LET_MUT; // (let) `let x = 1;`
         stmt.var.expr_let.ident = *p_consume(self);
         assert(p_consume(self)->type == TEQUAL);
 
@@ -170,8 +171,8 @@ struct node_stmt p_parse_stmt(struct parser *self)
         p_peek(self, 0) != NULL
         && (p_peek(self, 0)->type != TLET
             && (p_peek(self, 1) != NULL && p_peek(self, 1)->type == TCOLON)
-            && (p_peek(self, 0) != NULL && p_peek(self, 2)->type == TEQUAL))) {
-        stmt.type = STMT_LET; // (walrus) `x := 1;`
+            && (p_peek(self, 2) != NULL && p_peek(self, 2)->type == TEQUAL))) {
+        stmt.type = STMT_LET_MUT; // (walrus) `x := 1;`
         stmt.var.expr_let.ident = *p_consume(self);
 
         assert(p_consume(self)->type == TCOLON);
@@ -191,6 +192,34 @@ struct node_stmt p_parse_stmt(struct parser *self)
         }
         else {
             fprintf(stderr, "error: Expected `;`\n");
+            goto fail;
+        }
+    }
+    else if (
+        p_peek(self, 0) != NULL
+        && (p_peek(self, 0)->type != TLET
+            && (p_peek(self, 1) != NULL && p_peek(self, 1)->type == TCOLON)
+            && (p_peek(self, 2) != NULL && p_peek(self, 2)->type == TCOLON))) {
+        stmt.type = STMT_LET_IMUT; // (walrus) `x := 1;`
+        stmt.var.expr_let.ident = *p_consume(self);
+
+        assert(p_consume(self)->type == TCOLON);
+        assert(p_consume(self)->type == TCOLON);
+
+        struct node_expr nexpr = p_parse_expr(self);
+        if (nexpr.type != EXPR_INVALID) {
+            stmt.var.expr_let.expr = nexpr;
+        }
+        else {
+            fprintf(stderr, "error: Invalid expression\n");
+            goto fail;
+        }
+        if (p_peek(self, 0) != NULL
+            && p_peek(self, 0)->type == TSEMICOLON) { /* TODO \n without semi */
+            p_consume(self);
+        }
+        else {
+            fprintf(stderr, "error: Expected `\\n`\n");
             goto fail;
         }
     }
@@ -255,11 +284,20 @@ void p_node_prog_print(struct node_prog *self)
                 "Exit Statement with code: %s\n",
                 stmt.var.expr_exit.var.int_lit.value);
         }
-        else if (stmt.type == STMT_LET) {
+        else if (stmt.type == STMT_LET_MUT) {
             printf(
-                "Let Statement: %s = %s\n",
+                "Let Mutable Statement: %s = %s\n",
                 stmt.var.expr_let.ident.value,
                 stmt.var.expr_let.expr.var.int_lit.value);
+        }
+        else if (stmt.type == STMT_LET_IMUT) {
+            printf(
+                "Let Immutable Statement: %s = %s\n",
+                stmt.var.expr_let.ident.value,
+                stmt.var.expr_let.expr.var.int_lit.value);
+        }
+        else {
+            fprintf(stderr, "error: Invalid Statement: %d\n", stmt.type);
         }
     }
 }
@@ -267,7 +305,7 @@ void p_node_prog_print(struct node_prog *self)
 // —————————————————————————————————————————————————————————————————————————————————————
 // Test
 
-static int run_main()
+static int test__parser()
 {
     struct token tokens[]
         = { { TEXIT, NULL },
@@ -292,7 +330,7 @@ static int run_main()
                     "Exit Statement with code: %s\n",
                     stmt.var.expr_exit.var.int_lit.value);
             }
-            else if (stmt.type == STMT_LET) {
+            else if (stmt.type == STMT_LET_MUT) {
                 printf(
                     "Let Statement: %s = %s\n",
                     stmt.var.expr_let.ident.value,

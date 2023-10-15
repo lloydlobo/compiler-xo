@@ -114,7 +114,28 @@ void g_gen_stmt(struct generator *self, const struct node_stmt *stmt)
         g_pop(self, "rdi");
         strcat(self->m_output, "    syscall\n");
     }
-    else if (stmt->type == STMT_LET) {
+    else if (stmt->type == STMT_LET_IMUT) {
+        const char *ident_val = stmt->var.expr_let.ident.value;
+        err_t err = hashtable_contains(&self->m_vars, ident_val);
+        if (err == ErrOk) {
+            fprintf(stderr, "error: Identifier already used: %s\n", ident_val);
+            goto fail;
+        }
+        assert(err == ErrNotFound && "stmt ident_val key maybe invalid");
+
+        char *const key = stmt->var.expr_let.ident.value;
+        struct g_var val = (struct g_var) { .stack_loc = self->m_stack_size };
+
+        err = hashtable_insert(&self->m_vars, key, &val);
+        if (err != ErrOk) {
+            fprintf(stderr, "error: %s: in hashtable_insert\n", err_str(err));
+            goto fail;
+        }
+        printf("%s\n", err_str(err));
+
+        g_gen_expr(self, &stmt->var.expr_let.expr);
+    }
+    else if (stmt->type == STMT_LET_MUT) {
         const char *ident_val = stmt->var.expr_let.ident.value;
         err_t err = hashtable_contains(&self->m_vars, ident_val);
         if (err == ErrOk) {

@@ -1,3 +1,3 @@
-answer := 42
-
-exit(answer)
+var :: 11
+varmut := 42
+exit(varmut)
