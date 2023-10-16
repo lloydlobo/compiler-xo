@@ -1,3 +1,4 @@
-var :: 11
-varmut := 42
-exit(varmut)
+a :: 8
+b := 2
+
+exit(a)

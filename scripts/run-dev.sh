@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 cmake -S . -B build && cmake --build build
-valgrind ./build/lumina test.lum
+valgrind -s --track-origins=yes --leak-check=full ./build/lumina test.lum
 echo $?
 
 ./out

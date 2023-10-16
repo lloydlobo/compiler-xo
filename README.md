@@ -56,19 +56,18 @@ exit(answer)
 Declaring variables before initializing them:
 
 ```C
-answer : int // variable : type
-answer = 42   // <declared> variable = expr
+answer: int = 42   // variable: type = expr
 exit(answer)
 ```
 
 Declaring and initializing variables with type:
 
 ```C
-answer = 42 -> int // variable = expr -> type
+answer: int = 42 // variable: type = expr
 exit(answer)
 
-low, high = 1, 5 -> int
-mid = (low + high) / 2 -> float
+low, high: int = 1, 5
+mid: float     = (low + high) / 2
 ```
 
 To sum it up:
@@ -89,7 +88,7 @@ Later:
 ### Operators :: TODO
 
 ```C
-x = 0 + 1 + 1 + 2 + 3
+x := 0 + 1 + 1 + 2 + 3
 assert(x == 7)
 ```
 
@@ -102,7 +101,7 @@ x, y := 2, 1
     assert(a == 3)
     z = a
 }
-assert(z == 3 && x == 2)
+assert(z == 3 and x == 2)
 assert(a == 3) /* won't compile as `a` is not in current scope */
 ```
 
@@ -112,20 +111,23 @@ assert(a == 3) /* won't compile as `a` is not in current scope */
 > FUTURE: allow for deferred bindings such that `let x; x = 42;` is possible
 > FUTURE: allow for walrus operator that `x := 42;` is possible
 
+### Strong typing
+
+```C
+Int_Alias :: int  // alias of int (similar to Odin)
+```
 
 ### Immutable variables :: FUTURE
 
 ```C
-foo :: 0 -> int
-sum := foo + 2
+foo :: 0 // type evaluated at compile time
+sum: int = foo + 2 // foo: int
 assert(sum == 2)
-assert(++sum == 3) // ok
-foo++              // err won't compile an immutable variable
+foo += 1         // err won't compile an immutable variable
 
-sum_imut :: 40 + foo + bar -> int
-assert(sum_imut == 42)
-sum_imut = 3    // err won't compile an immutable variable
-sum_imut++      // err won't compile an immutable variable
+fsum: float = foo + 2.0 // foo: float
+fsum += 1.0
+assert(fsum == 3.0) // ok
 
 parse_var :: (n_mut int!, n_imut int, n_wo_mut int) -> ()
 {
@@ -137,7 +139,7 @@ n_mut, n_wo_mut := 1, 9
 n_imut :: 7 -> int
 parse_var(&n_mut!, n_imut, n_wo_mut) // prints "2 7 9"
 
-val :: 2 -> int // immutable ident val of type int and value of 2
+val :: 2 // immutable ident val of type int and value of 2
 //
 // similar to call to inline function evaluated at compile time:
 //
@@ -150,8 +152,8 @@ val :: 2 -> int // immutable ident val of type int and value of 2
 Define constants using uppercase naming convention
 
 ```C
-PI :: 3.14159265 -> float
-MAX_VALUE :: 100 -> int
+PI :: 3.14159265 // type_of untyped float
+MAX_VALUE :: 100 // type_of untyped int
 
 MAX_VALUE :: int
 MAX_VALUE = 100 // err this won't compile
@@ -253,28 +255,28 @@ Category :: enum u8 { MUSIC, PODCAST, }
 ### Control Flow :: FUTURE
 
 ```C
+z: int
 x, y := 2, 1
 
-if x / 2 == y return 0
-else if x % 2 == y return 1
-else return -1
+if x == y and x % 2 not 0 {
+    z += 1
+}
+else if x % 2 == y or y % 2 == x {
+    z -= y
+}
+else {
+    z |= 1
+}
 ```
+
+Without braces use `do` directive:
 
 ```C
 x, y := 2, 1
-z int
 
-if x / 2 == y {
-    z += x
-    return z
-}
-else if x % 2 == y {
-    z += y
-    return z
-}
-else {
-    return -1
-}
+if x * 2 == y do return 0
+else if x % 2 == y do return 1
+else do return -1
 ```
 
 ### Loops :: FUTURE
@@ -286,6 +288,8 @@ n := arr.count /* 4 */
 for i : 0..n-1 {
     print("array[%] = %\n", i, a[i])
 }
+
+for i : 0..n-1 do print("%\n", i)
 ```
 
 ### Functions :: FUTURE
@@ -293,9 +297,23 @@ for i : 0..n-1 {
 `::` evaluated at compile time
 
 ```C
-sum :: (x, y)
+sum :: (x: int, y: int)
     return x + y
+```
 
+Omit the type from previous parameters when two or more consecutive
+parameters sharing same type. Like in Odin,`x: int, y: int` can
+be shortened to `x, y: int`:
+
+```C
+sum :: (x, y: int)
+    return x + y
+```
+
+Parameters passed by values rather than by reference.
+By default, these parameters are immutable values.
+
+```C
 hypot :: (a float, b float) -> float
     c_sq := (a * a) + (b * b)
     c = c_sq ** 0.5 -> float
@@ -310,6 +328,34 @@ hypot :: (a float, b float) -> int
 
 print :: (x float, y float) -> () {...}
 print :: (x float, y float) {...}
+```
+
+#### Named arguments
+
+```C
+sum :: (a, b int) -> int
+{
+    return a + b
+}
+x, y := 1, 2
+
+sum(a=x, b=y) // 3
+```
+
+#### Default values
+
+```C
+sum :: (a, b uint, c := 1) -> uint
+{
+    return a + b + c
+}
+x, y := 1, 2
+z := 1
+
+sum(x, y) // 4
+sum(x, y, z) // 4
+sum(x, y, 2) // 5
+
 ```
 
 #### Anonymous / Inline named functions
@@ -411,16 +457,16 @@ This is a curated list of Lumina functions for solving common problems.
 
 ```C
 n1, n2 := 0, 1
-next = 0 -> int
+next: int = 0
 
 print_fibonacci :: (num_terms -> int) -> ()
 {
-    i :: int // always initializes to 0
+    i :: int // always initializes to 0 untyped int
     i = 1
     print("%, \n", n1)
     print("%, \n", n2)
 
-    for i = 2 : i < num_terms : i++ {
+    for i = 2 : i < num_terms : i += 1 {
         next = n1 + n2
         print("%, \n", next)
         n1 = n2
@@ -511,4 +557,9 @@ valgrind --track-origins=yes ./build/lumina test.lum
 
 ## Credits
 
-Lumina is a C compiled language, built in the spirit of [Hydrogen](https://github.com/orosmatthew/hydrogen-cpp), and inspired by [Jai](https://github.com/BSVino/JaiPrimer/blob/master/JaiPrimer.md), [Compis](https://github.com/rsms/compis), C, Go, Rust, Python and many more.
+Lumina is a C compiled language, built in the spirit of
+[Hydrogen](https://github.com/orosmatthew/hydrogen-cpp), and inspired by
+[Jai](https://github.com/BSVino/JaiPrimer/blob/master/JaiPrimer.md),
+[Odin](https://odin-lang.org/),
+[Compis](https://github.com/rsms/compis),
+C, Go, Rust, Python and many more.

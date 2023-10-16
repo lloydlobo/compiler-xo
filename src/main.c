@@ -110,14 +110,16 @@ int main(int argc, char *argv[])
     if (output_asm == NULL)
         goto err_clean_generator;
 
+    g_free(&generator);
     p_free(parser);
     token_free_tokens(tokens, mut_token_count);
 
     {
-        printf("Generated Assembly Code:\n%s\n", output_asm);
+        printf("\nGenerated Assembly Code:\n\n%s\n", output_asm);
         FILE *file_out_asm = fopen(OUT_ASM_FILENAME, "w");
         if (file_out_asm == NULL)
             goto err_clean_file_out_asm_output_asm;
+
         fputs(output_asm, file_out_asm);
         fclose(file_out_asm);
         // free(output_asm);
@@ -136,7 +138,7 @@ err_clean_file_out_asm_output_asm:
 
 err_clean_generator:
     perror("Could not generate assembly output\n");
-    // generator_free(generator);
+    g_free(&generator);
     return EXIT_FAILURE;
 
 err_clean_parser_tokens:
