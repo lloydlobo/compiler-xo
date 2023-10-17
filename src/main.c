@@ -166,15 +166,13 @@ int main(int argc, char *argv[])
     int mut_token_count = 0;
     struct tokenizer *tokenizer = t_init(contents);
     struct token *tokens = t_tokenize(tokenizer, &mut_token_count);
+    profiler_handle.lexer.total_lines_processed
+        = tokenizer->total_code_lines_processed;
+    profiler_handle.lexer.code_lines_processed
+        = tokenizer->code_lines_processed;
+    profiler_handle.lexer.tokens_processed = (size_t)mut_token_count;
     t_free(tokenizer);
 
-    // HACKS: ugh use actual lines processed for these two!!
-    // 4 lines = 4 * 8 bytes = 32 bytes
-    size_t avg_est_lines = (input_size / 8) + 1;
-    profiler_handle.lexer.total_lines_processed = avg_est_lines;
-    profiler_handle.lexer.code_lines_processed
-        = abs((int)(avg_est_lines - (mut_token_count / 8)));
-    profiler_handle.lexer.tokens_processed = (size_t)mut_token_count;
     /* module::parser.c */
 
     struct parser *parser = p_init(tokens, mut_token_count);

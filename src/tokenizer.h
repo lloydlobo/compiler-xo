@@ -179,7 +179,6 @@ struct token *t_tokenize(struct tokenizer *self, int *token_count)
     size_t i = 0;
 
     while (t_peek(self, ofst) != '\0') {
-        self->code_lines_processed += 1;
         if (isalpha(t_peek(self, ofst))) {
             buf[i++] = t_consume(self);
             while (t_peek(self, ofst) != '\0' && isalnum(t_peek(self, ofst))) {
@@ -242,6 +241,9 @@ struct token *t_tokenize(struct tokenizer *self, int *token_count)
             && tokens[(*token_count - 1)].type != TCOMMENT) { // == ';') {
             t_consume(self);
             tokens[(*token_count)++] = (struct token) { .type = TSEMICOLON };
+            self->code_lines_processed += 1;
+            self->total_code_lines_processed += 1;
+
             while (t_peek(self, ofst) == '\n') {
                 assert(t_consume(self) == '\n');
                 self->total_code_lines_processed += 1;
