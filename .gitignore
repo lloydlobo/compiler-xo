@@ -26,3 +26,5 @@ src/neoparser.h
 src/output
 src/comptime.h
 .vscode
+docs/scratch.org
+docs/scratch.org~

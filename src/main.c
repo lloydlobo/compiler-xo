@@ -4,12 +4,15 @@
 
 #include <asm-generic/errno-base.h>
 #include <assert.h>
+#include <bits/types/clock_t.h>
 #include <ctype.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "array.h"
 #include "generator.h"
@@ -19,14 +22,83 @@
 #include "print.h"
 #include "tokenizer.h"
 
-#define OUT_ASM_FILENAME "out.asm"
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#define sizeof_field(t, f) (sizeof(((t *)0)->f))
-
 #define USAGE_MESSAGE \
     "Invalid usage. Correct usage is: ...\nlumina <input.lum>\n"
 
-err_t parse_input_file_ext(const char *input, const char *expect_ext);
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define sizeof_field(t, f) (sizeof(((t *)0)->f))
+
+struct profiler_timer {
+    double time_start;
+    double time_end;
+    double time_elapsed;
+};
+void profiler_timer_elapse(struct profiler_timer *self)
+{
+    self->time_elapsed
+        = ((double)(self->time_end - self->time_start)) / CLOCKS_PER_SEC;
+};
+struct profiler {
+    struct {
+        size_t number;
+        char *label;
+    } workspace;
+    struct {
+        size_t code_lines_processed;
+        size_t total_lines_processed;
+        size_t tokens_processed;
+    } lexer;
+    struct profiler_timer front_end;
+    struct profiler_timer x64;
+    struct profiler_timer compiler;
+    struct profiler_timer linker;
+    struct profiler_timer total;
+};
+struct profiler profiler_init(size_t workspace_number, char *workspace_label)
+{
+    struct profiler self;
+
+    memset(&self, 0, sizeof(struct profiler));
+
+    self.workspace.label = workspace_label;
+    self.workspace.number = workspace_number;
+
+    return self;
+}
+void profiler_start(struct profiler *self)
+{
+    self->total.time_start = clock();
+};
+void profiler_stop(struct profiler *self)
+{
+    self->total.time_end = clock();
+
+    profiler_timer_elapse(&self->total);
+    profiler_timer_elapse(&self->linker);
+    profiler_timer_elapse(&self->compiler);
+    profiler_timer_elapse(&self->x64);
+    profiler_timer_elapse(&self->front_end);
+};
+void profiler_emit(const struct profiler *self)
+{
+    printf("\n");
+    printf(
+        "Stats for Workspace %zu (\"%s\"):\n",
+        self->workspace.number,
+        self->workspace.label);
+    printf(
+        "Lexer lines processed: %zu (%zu including blanklines, comments.)\n",
+        self->lexer.code_lines_processed,
+        self->lexer.total_lines_processed);
+    printf("Lexer tokens processed: %zu.\n", self->lexer.tokens_processed);
+    printf("Front-end time: %.6f seconds.\n", self->front_end.time_elapsed);
+    printf("x64       time: %.6f seconds.\n", self->x64.time_elapsed);
+    printf("\n");
+    printf("Compiler  time: %.6f seconds.\n", self->compiler.time_elapsed);
+    printf("Link      time: %.6f seconds.\n", self->linker.time_elapsed);
+    printf("Total     time: %.6f seconds.\n", self->total.time_elapsed);
+    printf("\n");
+};
 
 err_t parse_input_file_ext(const char *input, const char *expect_ext)
 {
@@ -52,6 +124,11 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    struct profiler profiler_handle;
+    profiler_handle = profiler_init(1, "Debug");
+    profiler_start(&profiler_handle);
+
+    profiler_handle.front_end.time_start = clock();
     const char *filename = argv[1];
     const char *expect_ext = "lum";
     err_t err = parse_input_file_ext(filename, expect_ext);
@@ -79,9 +156,11 @@ int main(int argc, char *argv[])
         contents[input_size] = '\0';
         fclose(input_file_lum);
     }
+    profiler_handle.front_end.time_end = clock();
 
     println("Hello, World from Lumina!");
 
+    profiler_handle.compiler.time_start = clock();
     /* module::tokenizer.c */
 
     int mut_token_count = 0;
@@ -89,59 +168,77 @@ int main(int argc, char *argv[])
     struct token *tokens = t_tokenize(tokenizer, &mut_token_count);
     t_free(tokenizer);
 
+    // HACKS: ugh use actual lines processed for these two!!
+    // 4 lines = 4 * 8 bytes = 32 bytes
+    size_t avg_est_lines = (input_size / 8) + 1;
+    profiler_handle.lexer.total_lines_processed = avg_est_lines;
+    profiler_handle.lexer.code_lines_processed
+        = abs((int)(avg_est_lines - (mut_token_count / 8)));
+    profiler_handle.lexer.tokens_processed = (size_t)mut_token_count;
     /* module::parser.c */
 
     struct parser *parser = p_init(tokens, mut_token_count);
     struct node_prog *prog = p_parse_prog(parser);
     if (prog == NULL)
-        goto err_clean_parser_tokens;
+        goto fail_clean_parser_tokens;
     p_node_prog_print(prog);
-
     /* module::generator.c */
 
     struct generator generator = g_init(prog);
     char *output_asm = g_gen_prog(&generator);
-    // generator_free(generator);
     if (prog != NULL) {
         if (prog->stmts != NULL)
             free(prog->stmts);
         free(prog);
     }
     if (output_asm == NULL)
-        goto err_clean_generator;
+        goto fail_clean_generator;
 
     g_free(&generator);
     p_free(parser);
     token_free_tokens(tokens, mut_token_count);
+    profiler_handle.compiler.time_end = clock();
+    /* write assembly to output asm file */
 
+    printf("\nGenerated Assembly Code:\n\n%s\n", output_asm);
+
+    profiler_timer_elapse(&profiler_handle.front_end);
+    clock_t clock_continued
+        = profiler_handle.front_end.time_elapsed * CLOCKS_PER_SEC;
+    profiler_handle.front_end.time_start = clock_continued;
     {
-        printf("\nGenerated Assembly Code:\n\n%s\n", output_asm);
-        FILE *file_out_asm = fopen(OUT_ASM_FILENAME, "w");
+        FILE *file_out_asm = fopen("out.asm", "w");
         if (file_out_asm == NULL)
-            goto err_clean_file_out_asm_output_asm;
-
+            goto fail_clean_file_out_asm_output_asm;
         fputs(output_asm, file_out_asm);
         fclose(file_out_asm);
-        // free(output_asm);
     }
-
+    profiler_handle.front_end.time_end = clock();
     /* assemble and... link the assembly code */
+
+    profiler_handle.x64.time_start = clock();
     system("nasm -felf64 out.asm");
+    profiler_handle.x64.time_end = clock();
+    profiler_handle.linker.time_start = clock();
     system("ld out.o -o out");
+    profiler_handle.linker.time_end = clock();
+
+    profiler_stop(&profiler_handle);
+    profiler_emit(&profiler_handle);
 
     return EXIT_SUCCESS;
 
-err_clean_file_out_asm_output_asm:
+fail_clean_file_out_asm_output_asm:
     perror("Could not open/create asm output file\n");
     free(output_asm);
     return EXIT_FAILURE;
 
-err_clean_generator:
+fail_clean_generator:
     perror("Could not generate assembly output\n");
     g_free(&generator);
     return EXIT_FAILURE;
 
-err_clean_parser_tokens:
+fail_clean_parser_tokens:
     fprintf(stderr, "--%d-- Invalid program\n", __LINE__);
     p_free(parser);
     token_free_tokens(tokens, mut_token_count);

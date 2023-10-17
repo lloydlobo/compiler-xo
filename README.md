@@ -1,3 +1,4 @@
+
 # Lumina: Compiled with C
 
 Lumina is a simple C inspired language.
@@ -106,7 +107,7 @@ assert(a == 3) /* won't compile as `a` is not in current scope */
 ```
 
 > DONE: eliminate the use of `;` semicolons and rely on let the parser infer
->     end of statement by the each lines linebreak `\n`
+> end of statement by the each lines linebreak `\n`
 > FUTURE: for constants use `const` type for compile-time immutability
 > FUTURE: allow for deferred bindings such that `let x; x = 42;` is possible
 > FUTURE: allow for walrus operator that `x := 42;` is possible
@@ -147,6 +148,7 @@ val :: 2 // immutable ident val of type int and value of 2
 //     return self
 // } (2) // called with self as 2
 ```
+
 ### Constants :: FUTURE
 
 Define constants using uppercase naming convention
@@ -252,6 +254,7 @@ Category :: enum u8 { MUSIC, PODCAST, }
     // ...
 }
 ```
+
 ### Control Flow :: FUTURE
 
 ```C
@@ -408,7 +411,7 @@ fn_2 :: (a int, b int)
 
 >> The capture retains m because it is a global object that doesn’t need to be passed as a parameter.
 >>
->> ```jai
+```jai
 >>                                  { ... } // Anonymous code block
 >>                        [capture] { ... } // Captured code block
 >>      (i: int) -> float [capture] { ... } // Anonymous function
@@ -420,12 +423,14 @@ fn_2 :: (a int, b int)
 
 #### Closures :: FUTURE
 
-```C
+```
+
 get_bdate :: (val int) -> int { return val}
 
 // FIXME: how will we do closures?
 birthdate :: |get_bdate| -> int
 birthdate :: get_bdate -> int
+
 ```
 <!--
 birthdate :: |get_bdate()| -> int
@@ -529,7 +534,7 @@ assert(x(1) == 1)
 
 #### `syscall`
 
-```asm test.asm
+```asm
 global _start
 _start:
 mov rax, 60 ;; linux syscall code for exit

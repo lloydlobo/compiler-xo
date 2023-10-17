@@ -27,6 +27,7 @@ enum NodeStmtType {
     STMT_EXIT,
     STMT_LET_MUT,
     STMT_LET_IMUT,
+    STMT_COMMENT,
     STMT_INVALID = -1,
 };
 
@@ -222,6 +223,13 @@ struct node_stmt p_parse_stmt(struct parser *self)
             fprintf(stderr, "error: Expected `\\n`\n");
             goto fail;
         }
+    }
+    else if (p_peek(self, 0) != NULL && p_peek(self, 0)->type == TCOMMENT) {
+        if (p_peek(self, 0)->value == NULL) {
+            fprintf(stderr, "Empty Comment\n");
+        }
+        stmt.type = STMT_COMMENT;
+        p_consume(self);
     }
     else {
         perror("Syntax error\n");
