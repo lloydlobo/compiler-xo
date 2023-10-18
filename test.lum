@@ -1,7 +1,8 @@
-a :: 8
-b := 2
+first :: 7
+second := 42
+third :: 3
 
-exit(a)
+exit(second)
 
 // this is a line comment
 // you can have many line comments for now

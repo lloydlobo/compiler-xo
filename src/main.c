@@ -81,6 +81,10 @@ void perf_stop(struct perf *self)
 };
 void perf_emit(const struct perf *self)
 {
+    double acc_elapsed_time = self->front_end.time_elapsed
+        + self->x64.time_elapsed + self->compiler.time_elapsed
+        + self->linker.time_elapsed;
+
     printf(
         "\nStats for Workspace %zu (\"%s\"):\n",
         self->workspace.number,
@@ -94,7 +98,10 @@ void perf_emit(const struct perf *self)
     printf("x64       time: %.6f seconds.\n\n", self->x64.time_elapsed);
     printf("Compiler  time: %.6f seconds.\n", self->compiler.time_elapsed);
     printf("Link      time: %.6f seconds.\n", self->linker.time_elapsed);
-    printf("Total     time: %.6f seconds.\n\n", self->total.time_elapsed);
+    printf(
+        "Total     time: %.6f seconds. (%.6f seconds for above.)\n\n",
+        self->total.time_elapsed,
+        acc_elapsed_time);
 };
 
 err_t parse_input_file_ext(const char *input, const char *expect_ext)
@@ -120,15 +127,15 @@ err_t parse_input_file_ext(const char *input, const char *expect_ext)
  */
 int main(int argc, char *argv[])
 {
-    if (argc != 2) {
-        fprintf(stderr, USAGE_MESSAGE);
-        return EXIT_FAILURE;
-    }
-
     struct perf perf_handle;
 
     perf_handle = profiler_init(1, "Debug");
     perf_start(&perf_handle);
+
+    if (argc != 2) {
+        fprintf(stderr, USAGE_MESSAGE);
+        return EXIT_FAILURE;
+    }
     /* read input source file */
 
     perf_handle.front_end.time_start = clock();
@@ -159,7 +166,7 @@ int main(int argc, char *argv[])
         fclose(input_file_lum);
     }
     perf_handle.front_end.time_end = clock();
-    println("Hello, World from Lumina!");
+
     perf_handle.compiler.time_start = clock();
     /* module::tokenizer.c */
 
@@ -199,8 +206,6 @@ int main(int argc, char *argv[])
     printf("\nGenerated Assembly Code:\n\n%s\n", output_asm);
 
     perf_timer_elapse(&perf_handle.front_end); // record last
-    // clock_t clock_continued = perf_handle.front_end.time_end;
-    // perf_handle.front_end.time_start = clock_continued;
     perf_handle.front_end.time_start = clock();
     {
         FILE *file_out_asm = fopen("out.asm", "w");
