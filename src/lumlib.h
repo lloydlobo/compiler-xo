@@ -7,10 +7,14 @@
 //  [Source](https://github.com/rsms/compis/blob/4823a04f9466e4a1ab903a3a718ec95af7038fe9/src/colib.h#L9)
 
 // clang-format off
+#include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
+
+// maybe include err.h here? or move it here? to avoid circular definition
 
 typedef int8_t             i8;
 typedef uint8_t            u8;
@@ -59,5 +63,23 @@ enum err_ { // clang-format off
 err_t err_errno(); // current errno value
 err_t err_errnox(int errnoval);
 const char *err_str(err_t);
+
+// —————————————————————————————————————————————————————————————————————————————————————
+//  string.h
+//
+// [Source](https://stackoverflow.com/a/46013943)
+// The functions strdup and strndup are not yet part of Standard C. They are
+// standardized in Posix.1-2008 and declared in <string.h> on Posix systems.
+
+/**
+ * Duplicate S, returning an identical malloc'd string.
+ */
+char *strdup(const char *str) {
+        size_t size = strlen(str) + 1;
+        char *ptr = (char *)malloc(size);
+        if (ptr != NULL)
+                memcpy(ptr, str, size);
+        return ptr;
+}
 
 #endif /* C8AE9E64_B750_47C2_8590_583FEDEFEBC5 */

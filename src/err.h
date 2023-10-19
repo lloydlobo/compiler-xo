@@ -6,9 +6,8 @@
 
 // [Source](https://github.com/rsms/compis/blob/4823a04f9466e4a1ab903a3a718ec95af7038fe9/src/err.c#L6)
 
-const char *err_str(err_t e)
-{
-    switch ((enum err_)e) { // clang-format off
+const char *err_str(err_t e) {
+        switch ((enum err_)e) { // clang-format off
         case ErrOk:           return "(no error)";
         case ErrInvalid:      return "invalid data or argument";
         case ErrSysOp:        return "invalid syscall op or syscall op data";
@@ -29,12 +28,11 @@ const char *err_str(err_t e)
         case ErrNotDir:       return "not a directory";
         case ErrIsDir:        return "is a directory";
     } // clang-format on
-    return "(unknown error)";
+        return "(unknown error)";
 }
 
-err_t err_errnox(int e)
-{
-    switch (e) { // clang-format off
+err_t err_errnox(int e) {
+        switch (e) { // clang-format off
     case 0: return 0;
     case EACCES:  return ErrAccess;
     case EEXIST:  return ErrExists;
@@ -53,9 +51,8 @@ err_t err_errnox(int e)
   } // clang-format on
 }
 
-err_t err_errno()
-{
-    return err_errnox(errno);
+err_t err_errno() {
+        return err_errnox(errno);
 }
 
 #endif /* BF02C38A_B180_4521_82AB_EC9A64C2F691 */

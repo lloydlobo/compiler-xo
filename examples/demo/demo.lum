@@ -1,0 +1,112 @@
+// #!/usr/bin/env bash
+//
+// #todo: implement this feature
+//
+// Run this file in your shell
+//     - Builds itself with #build instructions configured at the end of
+//       this file
+//     - Runs the executable when compilation is done
+
+// Lumina is lum.
+//
+//  um
+//    i
+//      a  m
+//   min  im l
+//
+// # Installing Lum
+// [Getting Started](https://lumina-lang.org/docs/install)
+//     Instructions for downloading and install the Lumina compiler and libraries
+//
+// # Learning Lumina
+// [Getting Started](https://::/docs/install)
+//     If you're new to Lumina, start your journey. It will show you how to download,
+//     install, and run your first Lumina program.
+// [What is Lumina](https://::/docs/overview)
+//     Wondering what Lumina is all about? Get a quick tour of the Lumina programming
+//     language and what it can do for you.
+// [Questions and Answers](https://::/docs/faq)
+//     If you have questions, check out the FAQ section. It has answers to common
+//     questions about Lumina.
+// [Learning by Example](https://github.com/::/examples):
+//     To learn Lumina step by step, check out a collection of practical examples.
+//     These examples will help you understand how to use Lumina effectively.
+
+// the_basics :: ()
+
+// Understanding Lexical Elements and Literals
+// Comments
+//
+//
+// my_int_variable: int // A documentation comment
+//
+//
+// You can use single-line comments throughout your code, but always
+// ensure that they begin on a new line.
+//
+// Multi-line comments begin with /* and are terminated by */.
+// /*
+//    Within multi-line comments, you can include any text or code,
+//    and it will be effectively commented out.
+// */
+
+// Numbers
+
+// a: int = 1
+
+// b: int // `b` is typed of type `int`
+// b = 1
+
+// c: float // `c` is typed of type `float` (64-bit floating point number)
+// c = 1
+
+// Assignment statements
+// d: int = 123 // declares a new variable `d` with type `int` and assigns a value to it
+// d = 321 // assigns a new value to `d`
+
+// `=` is the assignment operator
+
+// You can assign multiple variables with it:
+// e, f := 1, "enfold" // declares `e` and `f` and infers the type from the assignments
+// f, e = "unfold" , 0
+
+// Note: `:=` the walrus operator is two tokens, `:` and `=`
+
+// Constant declarations
+// The constant's value cannot be changed.
+// G :: "Gravitational constant" // constant `G` has the untyped string value "Gravitational constant"
+
+// ... explicitly type like a  variable declaration
+// H : int : 42
+// I :: H + 20 // constant computations are possible
+
+// _ = my_int_variable
+// _ = a
+
+// control_flow :: ()
+//
+// TODO:
+
+// # Build declarative
+//
+// ```bash
+// #!/usr/bin/env bash
+//
+// cmake -S . -B build && cmake --build build
+// valgrind -s --track-origins=yes --leak-check=full ./build/lumina test.lum
+// echo $?
+//
+// ./out
+// echo $?
+// ```
+//
+// #todo: implement this feature
+//
+//#build :: ()
+//{
+//    #shell {
+//        cmake -S . -B build && cmake --build build
+//        ./build/lumina test.lum
+//        echo $?
+//    }
+//}
