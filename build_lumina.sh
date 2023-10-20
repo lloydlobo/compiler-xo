@@ -3,11 +3,23 @@ set -eu
 
 # Taken from https://github.com/odin-lang/Odin/blob/master/build_odin.sh
 
+YEAR=$(date +"%Y")
+MONTH=$(date +"%m")
+VERSION="dev-$YEAR-$MONTH"
+
+
 # Build Options
+
 CC=clang
 CFLAGS="-std=c99 -Wall -Werror"
+
+# Append version as a pre-processor macro to CFLAGS
+CFLAGS="$CFLAGS -DLUMINA_VERSION_RAW="
+CFLAGS="$CFLAGS$VERSION"
+
 DISABLED_WARNINGS="-Wno-switch -Wbuiltin-macro-redefined -Wno-unused-value -Wno-unused-function"
 LDFLAGS="-pthread -lm -lstdc++"
+
 OS_ARCH="$(uname -m)"
 OS_NAME="$(uname -s)"
 
@@ -20,7 +32,9 @@ error() {
 }
 
 build_compiler() {
-    case $1 in
+    local build_mode="$1"
+
+    case "$build_mode" in
         debug)
             EXTRAFLAGS="-g"
             ;;
@@ -38,7 +52,7 @@ build_compiler() {
             EXTRAFLAGS="DNIGHTLY -O3"
             ;;
         *)
-            error "Build mode \"$1\" is unsupported!"
+            error "Unsupported build mode: $build_mode"
             ;;
     esac
 
@@ -65,8 +79,9 @@ elif [ $# -eq 1 ]; then
             rm -f $OUTPUT_BINARY
             ;;
         report)
-            [ ! -f "./lumina" ] && build_lumina debug
-            ./lumina report # NOTE: unimplimented
+            error "Report functionality is unimplemented."
+            # [ ! -f "./lumina" ] && build_lumina debug
+            # ./lumina report # NOTE: unimplimented
             ;;
         *)
             build_compiler "$1"

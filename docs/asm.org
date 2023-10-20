@@ -1,0 +1,84 @@
+* Assembly Basics
+
+> NOTE: `C` language syntax is used for lumina's `.lum` source code
+
+** Header
+
+#+begin_example asm
+global _start
+_start:
+#+end_example
+
+** Exit Syscall
+
+#+begin_example asm
+global _start
+_start:
+    mov rax, 60 ; Exit syscall number
+    mov rdi, 0  ; any valid exit code, 0 in this case for okay
+    syscall
+#+end_example
+
+#+begin_example C
+exit(0)
+#+end_example
+
+** Exit Sycall as default behavior even if source file is empty
+
+#+begin_example asm
+global _start
+_start:
+    mov rax, 60 ; exit convention symbol
+    mov rdi, 0  ; any valid exit code
+    syscall
+#+end_example
+
+#+begin_example C
+
+#+end_example
+
+** Assigning Variables
+
+#+begin_example asm
+global _start
+_start:
+    mov rax, 42 ; Assign 42 to rax
+    push rax
+
+    mov rax, 60
+    pop rdi ; Pop the top value from the stack into rdi (exit code)
+    syscall ; Kernel exits with code 42
+#+end_example
+
+#+begin_example C
+x := 42
+exit(42)
+#+end_example
+
+** Assigning Multiple Variables
+
+#+begin_example asm
+global _start
+_start:
+    mov rax, 42
+    push rax ; Push rax onto the stack
+    mov rax, 7
+    push rax
+    mov rax, 11
+    push rax
+    push QWORD [rsp + 8] ; push to top of stack, the value of register that
+			  ; is 8 bytes offset to current stack base pointer
+
+    mov rax, 60
+    pop rdi ; exit code (7) as address of value 7 is (1 * 8 bytes) away from
+            ; the last top stack pointer
+    syscall ; 8 bytes as we are using x64 architecture
+#+end_example
+
+#+begin_example C
+x := 42
+y := 7
+z := 11
+
+exit(y)
+#+end_example

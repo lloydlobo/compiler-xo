@@ -1,5 +1,11 @@
 all: debug
 
+wip:
+	./lumina test.lum
+
+valwip:
+	valgrind ./lumina test.lum
+
 demo:
 	./lumina examples/demo/demo.lum
 

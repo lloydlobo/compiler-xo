@@ -1,19 +1,23 @@
 ---
-BasedOnStyle: WebKit
+BasedOnStyle: LLVM
 AlignAfterOpenBracket: AlwaysBreak
-BinPackParameters: false
+BinPackParameters: true
 BinPackArguments: false
 AllowAllParametersOfDeclarationOnNextLine: true
 NamespaceIndentation: None
 
-BreakBeforeBraces: Stroustrup
+BreakBeforeBraces: Attach # Allman | Stroustrup | Attach
+IndentWidth: 8  # if Attach use 8 spaces; else if Stroustrup use 4 spaces
+ColumnLimit: 100 # 80
+UseTab: Never
 
-ColumnLimit: 80
 PenaltyReturnTypeOnItsOwnLine: 200
 PenaltyIndentedWhitespace: 1
 PointerAlignment: Right
 AllowShortFunctionsOnASingleLine: None
 AlwaysBreakTemplateDeclarations: Yes
 AlignConsecutiveMacros: None
+AlignConsecutiveDeclarations: true
 AlignEscapedNewlines: DontAlign
+
 ...
