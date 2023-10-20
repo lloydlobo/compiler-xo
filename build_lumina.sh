@@ -17,7 +17,7 @@ CFLAGS="-std=c99 -Wall -Werror"
 CFLAGS="$CFLAGS -DLUMINA_VERSION_RAW="
 CFLAGS="$CFLAGS$VERSION"
 
-DISABLED_WARNINGS="-Wno-switch -Wbuiltin-macro-redefined -Wno-unused-value -Wno-unused-function"
+DISABLED_WARNINGS="-Wno-switch -Wbuiltin-macro-redefined -Wno-unused-value -Wno-unused-function -Wno-unused-variable"
 LDFLAGS="-pthread -lm -lstdc++"
 
 OS_ARCH="$(uname -m)"

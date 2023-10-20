@@ -1,5 +1,8 @@
 all: debug
 
+format:
+	python3 format.py --verbose --write test.lum
+
 wip:
 	./lumina test.lum
 

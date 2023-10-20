@@ -454,6 +454,35 @@ hypot :: foo struct <- (a float, b float)
 }
 ```
 
+#### Compile time struct args
+
+
+```C
+TakeawayPizza :: struct (count_of_pizzas_slices: int) {
+    name: string,
+    weight: float,
+    flavor: Flavor,
+
+    slices: [count_of_pizza_slices] Cheese_Type,
+}
+
+make_pizza :: (weight: float) {
+    t_pizza: TakeawayPizza(7)
+
+    // Do some initialization of cheese slices here
+
+    t_pizza.weight = weight
+
+    eat_pizza(t_pizza)
+}
+
+main :: ()  {
+    make_pizza(2.0)
+
+    t1 := TakeawayPizza(3)
+}
+```
+
 ### Luminsms :: FUTURE
 
 This is a curated list of Lumina functions for solving common problems.

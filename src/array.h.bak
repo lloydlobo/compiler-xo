@@ -1,0 +1,383 @@
+#ifndef SRC_ARRAY
+#define SRC_ARRAY
+
+#include "lumlib.h"
+#include <assert.h>
+#include <math.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+// —————————————————————————————————————————————————————————————————————————————————————
+// HELPER: Move to lumlib or print.h
+
+/** Define the format type for printing */
+enum FmtType { // clang-format off
+    FmtChar,                        /* `"%c"` */
+    FmtDigit,                       /* `"%d"` */
+    FmtFloat,                       /* `"%f"` */
+    FmtHexLower,                    /* `"%x"` */
+    FmtHexUpper,                    /* `"%X"` */
+    FmtInteger,                     /* `"%i"` */
+    FmtOctalInt,                    /* `"%o"` */
+    FmtPointer,                     /* `"%p"` */
+    FmtString,                      /* `"%s"` */
+}; // clang-format on
+
+/** Convert the format type to its corresponding string */
+const char *fmt_to_str(const enum FmtType self) { // clang-format off
+    switch (self) {
+    case FmtChar:                   return "%c";
+    case FmtDigit:                  return "%d";
+    case FmtFloat:                  return "%f";
+    case FmtHexLower:               return "%x";
+    case FmtHexUpper:               return "%X";
+    case FmtInteger:                return "%i";
+    case FmtOctalInt:               return "%o";
+    case FmtPointer:                return "%p";
+    case FmtString:                 return "%s";
+    }
+} // clang-format on
+
+// —————————————————————————————————————————————————————————————————————————————————————
+// array.h
+
+struct array {
+        size_t size;
+        size_t capacity;
+        void **data;
+};
+
+struct array *array_init();
+
+err_t array_push_back(struct array *self, void *element);
+void array_reverse(struct array *self);
+
+void *array_at(const struct array *self, size_t index);
+void array_print_primitive(const struct array *self, const enum FmtType fmt);
+
+void array_free_data(struct array *self);
+void array_free_self(struct array *self);
+
+// —————————————————————————————————————————————————————————————————————————————————————
+// array.c
+
+#define INITIAL_ARRAY_CAPACITY 16
+
+static void swap(void **a, void **b);
+
+// —————————————————————————————————————————————————————————————————————————————————————
+// PUBLIC
+
+/** Initialize an array */
+struct array *array_init() {
+        struct array *self;
+        self = (struct array *)malloc(sizeof(struct array));
+        if (self == NULL)
+                return NULL;
+
+        self->data = (void **)malloc(INITIAL_ARRAY_CAPACITY * sizeof(void *));
+        if (self->data == NULL) {
+                free(self);
+                return NULL;
+        }
+        self->size = 0;
+        self->capacity = INITIAL_ARRAY_CAPACITY;
+
+        return self;
+}
+
+/** Add an element to the end of the array */
+err_t array_push_back(struct array *self, void *element) {
+        if (self->size >= self->capacity) {
+                void **ptr;
+                self->capacity *= 2;
+                ptr = (void **)realloc(
+                    self->data, self->capacity * sizeof(void *));
+                if (ptr == NULL)
+                        return ErrNoMem;
+                self->data = ptr;
+        }
+        self->data[self->size++] = element;
+
+        return ErrOk;
+}
+
+/** Retrieve an element at a specific index */
+void *array_at(const struct array *self, size_t index) {
+        if (self == NULL || index >= self->size)
+                return NULL;
+
+        return &self->data[index];
+}
+
+/** print primitive types in `struct array` with a valid format */
+void array_print_primitive(const struct array *self, const enum FmtType fmt) {
+        if (self == NULL)
+                return;
+
+        const char *__restrict format;
+        format = fmt_to_str(fmt);
+
+        printf("[ ");
+        for (size_t i = 0; i < self->size; i++) {
+                void *ptr = self->data[i];
+                printf(format, ptr);
+                printf(" ");
+        }
+        printf("]\n");
+};
+
+void array_reverse(struct array *self) {
+        if (self == NULL)
+                return;
+
+        for (size_t i = 0, mid = round(self->size / 2); i < mid; i++) {
+                swap(&self->data[i], &self->data[(self->size - 1) - i]);
+        }
+}
+
+/**
+ * Function to free the data inside the array
+ *
+ *#FIXME: invalid read, if data is int
+ *#can we assert that size of data[i] > primitive size, then free?
+ *#or if its a void ptr type?
+ *
+ */
+void array_free_data(struct array *self) {
+        if (self == NULL || self->data == NULL)
+                return;
+
+        for (size_t i = 0; i < self->size; i++) {
+                void *ptr = NULL;
+                ptr = self->data[i];
+                free(ptr);
+        }
+}
+
+/** Free array head, does not free entire data */
+void array_free_self(struct array *self) {
+        if (self == NULL)
+                return;
+
+        if (self->data != NULL)
+                free(self->data);
+        self->size = 0;
+        self->capacity = 0;
+        free(self);
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————
+// PRIVATE
+
+static void swap(void **a, void **b) {
+        if (a == NULL || b == NULL)
+                return;
+
+        void *tmp = *b;
+        *b = *a;
+        *a = tmp;
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————
+// TESTS
+
+static int test__array__1();
+static int test__array__2();
+static int test__array__3();
+
+int test__array() {
+        assert(test__array__1() == EXIT_SUCCESS);
+        // assert(test__array__2() == EXIT_SUCCESS);
+        // assert(test__array__3() == EXIT_SUCCESS);
+
+        printf("All tests passed.\n");
+
+        return 0;
+}
+
+static int test__array__1() {
+        struct array *arr = array_init();
+        assert(arr != NULL);
+        int capacity = 20;
+
+        // for (int i = 0; i < 10; i++) {
+        //     int *element = (int *)malloc(sizeof(int));
+        //     *element = i;
+        //     push(&myArray, element);
+        // }
+
+        for (int i = 1; i <= capacity; i++) {
+                void *element = NULL;
+
+                element = malloc(sizeof(intptr_t));
+                if (element == NULL) {
+                        array_free_self(arr);
+                        return ErrNoMem;
+                }
+                element = (void *)(intptr_t)i;
+                printf("element: %ld \n", (intptr_t)element);
+
+                assert(array_push_back(arr, element) == ErrOk);
+                // assert(array_push_back(arr, (void *)(intptr_t)i) == ErrOk);
+
+                assert(arr->size == i);
+        }
+        array_print_primitive(arr, FmtDigit);
+
+        if (false && "todo") {
+                for (int i = 0; i < capacity; i++) {
+                        int *value = (int *)array_at(arr, i);
+                        assert(value != NULL);
+                        assert(*value == i + 1);
+                }
+
+                assert(array_push_back(arr, NULL) == ErrOk);
+                assert(array_at(arr, arr->size) == NULL);
+        }
+
+        for (size_t i = 0; i < arr->size; i++) {
+                free(arr->data[i]);
+        }
+        free(arr->data);
+        arr->size = 0;
+        arr->capacity = 0;
+        // free(arr);
+
+        // array_free_data(arr);
+        // array_free_self(arr);
+
+        return EXIT_SUCCESS;
+}
+
+static int test__array__2() {
+        struct array *arr2 = array_init();
+        assert(arr2 != NULL);
+        arr2->capacity = 1; // Reset capacity from default to 1
+        arr2->data = (void **)malloc(sizeof(void *)); // Reset data
+        assert(array_push_back(arr2, (void *)0) == ErrOk);
+        assert(arr2->size == 1);
+        assert(arr2->capacity == 1);
+        assert(array_push_back(arr2, (void *)1) == ErrOk);
+        assert(arr2->size == 2);
+        assert(arr2->capacity == 2);
+        assert(array_push_back(arr2, (void *)2) == ErrOk);
+        assert(arr2->size == 3);
+        assert(arr2->capacity == 4);
+        assert(array_push_back(arr2, (void *)3) == ErrOk);
+        assert(arr2->size == 4);
+        assert(arr2->capacity == 4);
+        assert(array_push_back(arr2, (void *)4) == ErrOk);
+        assert(arr2->size == 5);
+        assert(arr2->capacity == 8);
+
+        array_free_self(arr2);
+
+        return EXIT_SUCCESS;
+}
+
+static int test__array__3() {
+        struct array *arr;
+
+        int testcase[] = { 1, 2, 3, 4 };
+        int expect_arr[] = { 4, 3, 2, 1 };
+
+        size_t capacity = sizeof(testcase) / sizeof(testcase[0]);
+        assert(capacity == sizeof(expect_arr) / sizeof(expect_arr[0]));
+
+        arr = array_init();
+        assert(arr != NULL);
+        for (int i = 0; i < capacity; i++) {
+                assert(
+                    array_push_back(arr, (void *)(intptr_t)testcase[i])
+                    == ErrOk);
+                assert(arr->size == (i + 1));
+        }
+        array_print_primitive(arr, FmtDigit);
+
+        array_reverse(arr);
+        for (int i = 0; i < capacity; i++) {
+                assert((intptr_t)arr->data[i] == expect_arr[i]);
+        }
+        array_print_primitive(arr, FmtDigit);
+
+        array_free_self(arr);
+
+        return EXIT_SUCCESS;
+}
+
+// clang-format off
+
+/*
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stddef.h> // for offsetof
+
+// Define the struct for 'var'
+struct Var {
+    size_t stack_loc;
+    char* ident_name;
+};
+
+// Define a generic struct with a flexible array member
+typedef struct {
+    int len;
+    char data[]; // The flexible array member
+} GenericFAM;
+
+// Function to initialize a flexible array member
+void init_fam(void* fam, size_t element_size, size_t array_size) {
+    ((GenericFAM*)fam)->len = array_size;
+}
+
+// Function to add an element to the flexible array member
+void push_fam(void* fam, void* element, size_t element_size, size_t index) {
+    memcpy((char*)fam + sizeof(GenericFAM) + index * element_size, element, element_size);
+}
+
+// Function to create and populate a VarFAM with 'var' elements
+GenericFAM* create_and_populate_var_fam(size_t array_size) {
+    size_t element_size = sizeof(struct Var);
+    GenericFAM* var_fam = (GenericFAM*)malloc(sizeof(GenericFAM) + array_size * element_size);
+
+    // Initialize the flexible array member
+    init_fam(var_fam, element_size, array_size);
+
+    // Populate 'var' elements
+    for (int i = 0; i < array_size; i++) {
+        struct Var element;
+        element.stack_loc = i + 1;
+        element.ident_name = "VarName"; // You can set the name as needed
+        push_fam(var_fam, &element, element_size, i);
+    }
+
+    return var_fam;
+}
+
+int main() {
+    size_t array_size = 5;
+
+    // Create and populate the 'VarFAM'
+    GenericFAM* var_fam = create_and_populate_var_fam(array_size);
+
+    // Print 'var' elements
+    printf("Array of 'var' elements:\n");
+    for (int i = 0; i < array_size; i++) {
+        struct Var* element = (struct Var*)((char*)var_fam + sizeof(GenericFAM) + i * sizeof(struct Var));
+        printf("stack_loc: %zu, ident_name: %s\n", element->stack_loc, element->ident_name);
+    }
+
+    // Free memory
+    free(var_fam);
+
+    return 0;
+}
+
+ */
+// clang-format on
+
+#endif /* SRC_ARRAY */

@@ -96,7 +96,7 @@ int test_new_parser_prog_v1(void)
     int size = sizeof(struct node_prog);
     printf("size: %d\n", size);
     struct node_prog *prog = (struct node_prog *)malloc(len * size);
-    ERR_DBG_LN("");
+    // ERR_DBG_LN("");
     printf("count: %zu\n", prog->stmt_count);
 
     struct node_stmt stmt
@@ -119,7 +119,7 @@ int test_new_parser_prog_v1(void)
     printf("count: %zu\n", prog->stmt_count);
 
     // .var.exit = NULL };
-    ERR_DBG_LN("");
+    // ERR_DBG_LN("");
     printf("%zu: %p\n", prog->stmt_count, &prog->stmts);
 
     return 0; // Successful

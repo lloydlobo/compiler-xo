@@ -1,9 +1,13 @@
-first :: 7
-second := 42
-third :: 3
+myfunction :: () {
+}
 
-exit(second)
+// space before comment
+// TODO: enable `_` for pretty identifier names a_imut_var...
+aimutvar :: 27
 
-// this is a line comment
-// you can have many line comments for now
-// make sure they always start on a new line
+bmutvar := 11
+cimutvar :: 2
+
+// rsthsth\
+
+exit(aimutvar)

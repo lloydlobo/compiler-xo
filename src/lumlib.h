@@ -1,6 +1,12 @@
 #ifndef C8AE9E64_B750_47C2_8590_583FEDEFEBC5
 #define C8AE9E64_B750_47C2_8590_583FEDEFEBC5
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define sizeof_field(t, f) (sizeof(((t *)0)->f))
+
+// #define ERR_DBG(msg) fprintf(stderr, "--%d-- %s ", __LINE__, msg);
+// #define ERR_DBG_LN(msg) fprintf(stderr, "--%d-- %s\n", __LINE__, msg);
+
 // —————————————————————————————————————————————————————————————————————————————————————
 //  types
 //
@@ -60,8 +66,8 @@ enum err_ { // clang-format off
   ErrIsDir        = -18, // is a directory
 }; // clang-format on
 
-err_t err_errno(); // current errno value
-err_t err_errnox(int errnoval);
+err_t       err_errno(); // current errno value
+err_t       err_errnox(int errnoval);
 const char *err_str(err_t);
 
 // —————————————————————————————————————————————————————————————————————————————————————
@@ -74,11 +80,27 @@ const char *err_str(err_t);
 /**
  * Duplicate S, returning an identical malloc'd string.
  */
-char *strdup(const char *str) {
-        size_t size = strlen(str) + 1;
-        char *ptr = (char *)malloc(size);
+char *strdup(const char *s) {
+        size_t size = strlen(s) + 1;
+        char  *ptr = (char *)malloc(size);
         if (ptr != NULL)
-                memcpy(ptr, str, size);
+                memcpy(ptr, s, size);
+        return ptr;
+}
+
+/**
+ * Duplicate S up to a specified length, returning malloc'd string.
+ */
+char *strndup(const char *s, size_t n) {
+        char  *ptr;
+        size_t n1;
+        for (n1 = 0; n1 < n && s[n1] != '\0'; n1 += 1)
+                continue;
+        ptr = (char *)malloc(n + 1);
+        if (ptr != NULL) {
+                memcpy(ptr, s, n1);
+                ptr[n1] = '\0';
+        }
         return ptr;
 }
 
