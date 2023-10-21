@@ -1,7 +1,7 @@
 all: debug
 
 format:
-	python3 format.py --verbose --write test.lum
+	python3 pkg/luminafmt/luminafmt.py --verbose --write test.lum
 
 wip:
 	./lumina test.lum

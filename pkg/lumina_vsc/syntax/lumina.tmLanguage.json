@@ -1,0 +1,66 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Lumina",
+    "patterns": [
+        { "include": "#storage.type" },
+        { "include": "#keyword.control.conditional" },
+        { "include": "#keyword.operator.arithmetic" },
+        { "include": "#keyword.operator.assignment" },
+        { "include": "#punctuation.definition" },
+        { "include": "#punctuation.separator" },
+        { "include": "#constant.numeric" },
+        { "include": "#entity.name.function" },
+        { "include": "#variable" },
+        { "include": "#comment" }
+    ],
+    "repository": {
+        "storage.type": {
+            "name": "storage.type.lum",
+            "match": "\\bvar\\b"
+        },
+        "keyword.control.conditional": {
+            "name": "keyword.control.conditional.cis",
+            "match": "\\bif\\b"
+        },
+        "keyword.operator.arithmetic": {
+            "name": "keyword.operator.arithmetic.lum",
+            "match": "[+\\-*/%]"
+        },
+        "keyword.operator.assignment": {
+            "name": "keyword.operator.assignment.lum",
+            "match": "[\\:=\\::\\=]"
+        },
+        "punctuation.definition": {
+            "name": "punctuation.definition.lum",
+            "match": "[\\(\\)\\{\\}]"
+        },
+        "punctuation.separator": {
+            "name": "punctuation.separator.lum",
+            "match": "[,\\;]"
+        },
+        "constant.numeric": {
+            "name": "constant.numeric.lum",
+            "match": "\\b\\d+\\b"
+        },
+        "entity.name.function": {
+            "name": "entity.name.function.lum",
+            "match": "\\b[0-9A-Za-z_]+(?=\\s*\\::\\()"
+        },
+        "variable": {
+            "name": "variable.lum",
+            "match": "\\b[0-9A-Za-z_]+\\b"
+        },
+        "comment": {
+            "name": "comment.lum",
+            "begin": "/\\*",
+            "end": "\\*/",
+            "pattern": [
+                {
+                    "name": "comment.line.double-slash",
+                    "match": "//.*$"
+                }
+            ]
+        }
+    },
+    "scopeName": "source.lum"
+}

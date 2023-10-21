@@ -1,9 +1,11 @@
+
 # build compiler output
 
 build
 
 # build artifacts
 
+lumina
 libc
 libc.o
 out
@@ -17,15 +19,17 @@ vgcore.*
 
 # editor / linter artifacts
 .cache
+.vscode
 
 # notes / text
 
 .notes.md
+
+# archives
+
 src/lib/output
 src/neoparser.h
 src/output
 src/comptime.h
-.vscode
 docs/scratch.org
-docs/scratch.org~
-lumina
+docs/scripts/

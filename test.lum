@@ -1,13 +1,18 @@
+a :: 27
+bmut := 11
+c :: 2
+exit(a)
+
 myfunction :: () {
 }
 
-// space before comment
 // TODO: enable `_` for pretty identifier names a_imut_var...
-aimutvar :: 27
 
-bmutvar := 11
-cimutvar :: 2
+// x :: "hello"
+// y = 2
+// var big_variable : int
 
-// rsthsth\
-
-exit(aimutvar)
+// _ + 2
+/// # Documentation comment
+// Line comment
+/* Block comment */

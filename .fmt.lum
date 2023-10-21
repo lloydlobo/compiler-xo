@@ -1,0 +1,3 @@
+align_comment :: true    // Align consecutive end-of-line comments
+indent :: 4              // Number of spaces to indent each line
+trailing_newline :: true // Add a trailing newline to end of file

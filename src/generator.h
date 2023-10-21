@@ -59,10 +59,14 @@ struct var var_arr_at(struct var *self, size_t size, size_t index) {
         return self[index];
 }
 void var_print_array(struct var *self, size_t size) {
-        for (int i = 0; i < size; i++) { // clang-format off
-        printf( "--%d-- Var %d: stack_loc:[%zu] ident_name:'%s'\n",
-            __LINE__, i, self[i].stack_loc, self[i].ident_name);
-    } // clang-format on
+        for (int i = 0; i < size; i++) {
+                printf(
+                    "--%d-- Var %d: stack_loc:[%zu] ident_name:'%s'\n",
+                    __LINE__,
+                    i,
+                    self[i].stack_loc,
+                    self[i].ident_name);
+        }
 };
 
 // —————————————————————————————————————————————————————————————————————————————————————
@@ -73,8 +77,8 @@ void var_print_array(struct var *self, size_t size) {
  */
 struct generator {
         struct node_prog m_prog; /* node prog from `struct parser` */
-        char             m_output[ASM_STRINGSTREAM_OUTPUT_SIZE]; /* stringstream to emit
-                                                                    assembly code */
+        char m_output[ASM_STRINGSTREAM_OUTPUT_SIZE]; /* stringstream to emit
+                                                        assembly code */
         size_t      m_stack_size; /* Stack Pointer at compile time: */
         size_t      m_vars_size;
         size_t      m_vars_capacity;
@@ -86,17 +90,19 @@ struct generator {
 
 struct generator generator_init(const struct node_prog *prog);
 void             generator_free(struct generator *self);
-void             generator_gen_expr(struct generator *self, const struct node_expr *expr);
-void             generator_gen_stmt(struct generator *self, const struct node_stmt *stmt);
-char            *generator_gen_prog(struct generator *self);
+void  generator_gen_expr(struct generator *self, const struct node_expr *expr);
+void  generator_gen_stmt(struct generator *self, const struct node_stmt *stmt);
+char *generator_gen_prog(struct generator *self);
 
-static void  generator_push(struct generator *self, const char *reg);
-static void  generator_pop(struct generator *self, const char *reg);
-static bool  generator_vars_contains_ident(struct generator *self, const char *ident);
-static err_t generator_vars_push_back_var(struct generator *self, const struct var var);
+static void generator_push(struct generator *self, const char *reg);
+static void generator_pop(struct generator *self, const char *reg);
+static bool generator_vars_contains_ident(
+    struct generator *self, const char *ident);
+static err_t generator_vars_push_back_var(
+    struct generator *self, const struct var var);
 
 // —————————————————————————————————————————————————————————————————————————————————————
-// PUBLIC
+// INIT FREE
 
 struct generator generator_init(const struct node_prog *prog) {
         // PERF: use tokens count in main.c to set `self.m_size_m_vars`?
@@ -113,7 +119,8 @@ struct generator generator_init(const struct node_prog *prog) {
 
         vars = var_init_array(self.m_prog.stmt_count, self.m_vars_capacity);
         if (vars == NULL) {
-                fprintf(stderr, "error: %s at var_init_array\n", err_str(ErrNoMem));
+                fprintf(
+                    stderr, "error: %s at var_init_array\n", err_str(ErrNoMem));
                 exit(EXIT_FAILURE);
         }
         self.m_vars = vars; // memcpy this?
@@ -134,6 +141,56 @@ void generator_free(struct generator *self) {
         // free(self); // due to memset on stack with
 }
 
+// —————————————————————————————————————————————————————————————————————————————————————
+// PRIVATE
+
+static void generator_push(struct generator *self, const char *reg) {
+        strcat(self->m_output, "    push ");
+        strcat(self->m_output, reg);
+        strcat(self->m_output, "\n");
+        self->m_stack_size += 1;
+};
+
+static void generator_pop(struct generator *self, const char *reg) {
+        strcat(self->m_output, "    pop ");
+        strcat(self->m_output, reg);
+        strcat(self->m_output, "\n");
+        self->m_stack_size -= 1;
+};
+
+static err_t generator_vars_push_back_var(
+    struct generator *self, const struct var var) {
+        if (self->m_vars_size > self->m_vars_capacity)
+                return ErrEnd;
+
+        if (self->m_vars == NULL || var.ident_name == NULL || var.stack_loc < 0)
+                return ErrInvalid;
+
+        self->m_vars[self->m_vars_size] = (struct var){
+            .stack_loc = var.stack_loc,
+            .ident_name = var.ident_name,
+        };
+        self->m_vars_size += 1;
+
+        return ErrOk;
+}
+
+static bool generator_vars_contains_ident(
+    struct generator *self, const char *ident) {
+        if (self->m_vars_size == 0)
+                return false;
+
+        for (size_t i = 0; i < self->m_vars_size; i++) {
+                if (strcmp(self->m_vars[i].ident_name, ident) == 0)
+                        return true;
+        }
+
+        return false;
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————
+// PUBLIC
+
 void emit_function(struct generator *self) {
         assert(false && "unimplemented");
 }
@@ -146,14 +203,17 @@ void generator_gen_expr(struct generator *self, const struct node_expr *expr) {
                 generator_push(self, "rax");
         } else if (expr->type == EXPR_IDENT) {
                 char  *var_ident_name = NULL;
-                size_t var_stack_loc;
-                char  *ident_val;
+                size_t var_stack_loc = -1;
 
-                ident_val = expr->var.ident.value;
+                char *ident_val = expr->var.ident.value;
                 if (!generator_vars_contains_ident(self, ident_val)) {
-                        fprintf(stderr, "error: Undeclared identifier: %s\n", ident_val);
+                        fprintf(
+                            stderr,
+                            "error: Undeclared identifier: %s\n",
+                            ident_val);
                         goto fail;
                 }
+
                 for (size_t i = 0; i < self->m_vars_size; i += 1) {
                         struct var cur = self->m_vars[i];
                         if (strcmp(cur.ident_name, ident_val) == 0) {
@@ -162,20 +222,24 @@ void generator_gen_expr(struct generator *self, const struct node_expr *expr) {
                                 break;
                         }
                 }
-                if (var_ident_name == NULL) {
-                        const char *err_msg = err_str(ErrNotFound);
-                        fprintf(stderr, "error: %s: identifier %s\n", err_msg, ident_val);
+                if (var_ident_name == NULL) { // clang-format off
+                        fprintf(stderr, "error: %s: identifier %s\n",
+                                err_str(ErrNotFound), ident_val); // clang-format on
                         goto fail;
                 }
 
                 char offset[MAX_ASM_LINE_SIZE];
                 offset[0] = '\0';
-                size_t offset_idx = (self->m_stack_size - var_stack_loc - OFF_BY_ONE) *
-                                    BIT_MULTIPLIER; // clang-format off
-        strcat(offset,           "QWORD [rsp + ");
-        sprintf((offset + strlen(offset)), "%zu", offset_idx);
-        strcat(offset,                         "]\n");
-        generator_push(self, offset); // clang-format on
+                {
+                        size_t offset_index =
+                            (self->m_stack_size - var_stack_loc - OFF_BY_ONE) *
+                            BIT_MULTIPLIER;
+
+                        strcat(offset, "QWORD [rsp + ");
+                        sprintf(offset + strlen(offset), "%zu", offset_index);
+                        strcat(offset, "]\n");
+                }
+                generator_push(self, offset);
         } else if (expr->type == EXPR_INVALID) {
                 fprintf(stderr, "error: Invalid expression");
                 goto fail;
@@ -199,7 +263,10 @@ void generator_gen_stmt(struct generator *self, const struct node_stmt *stmt) {
 
                 ident_val = stmt->var.expr_let.ident.value;
                 if (generator_vars_contains_ident(self, ident_val)) {
-                        fprintf(stderr, "error: Identifier already used: %s\n", ident_val);
+                        fprintf(
+                            stderr,
+                            "error: Identifier already used: %s\n",
+                            ident_val);
                         goto fail;
                 }
                 var = (struct var){
@@ -208,7 +275,8 @@ void generator_gen_stmt(struct generator *self, const struct node_stmt *stmt) {
                 };
                 err_t err = generator_vars_push_back_var(self, var);
                 if (err != ErrOk) {
-                        fprintf(stderr, "error: %s: %s\n", err_str(err), ident_val);
+                        fprintf(
+                            stderr, "error: %s: %s\n", err_str(err), ident_val);
                         goto fail;
                 }
 
@@ -219,7 +287,10 @@ void generator_gen_stmt(struct generator *self, const struct node_stmt *stmt) {
 
                 ident_val = stmt->var.expr_let.ident.value;
                 if (generator_vars_contains_ident(self, ident_val)) {
-                        fprintf(stderr, "error: Identifier already used: %s\n", ident_val);
+                        fprintf(
+                            stderr,
+                            "error: Identifier already used: %s\n",
+                            ident_val);
                         goto fail;
                 }
                 var = (struct var){
@@ -228,7 +299,8 @@ void generator_gen_stmt(struct generator *self, const struct node_stmt *stmt) {
                 };
                 err_t err = generator_vars_push_back_var(self, var);
                 if (err != ErrOk) {
-                        fprintf(stderr, "error: %s: %s\n", err_str(err), ident_val);
+                        fprintf(
+                            stderr, "error: %s: %s\n", err_str(err), ident_val);
                         goto fail;
                 }
 
@@ -253,54 +325,10 @@ char *generator_gen_prog(struct generator *self) {
         strcat(self->m_output, "\n");
         strcat(self->m_output, "    mov rax, 60\n"); /* 60: exit symbol */
         strcat(self->m_output, "    mov rdi, 0\n");  /* 0: exit code */
-        strcat(self->m_output, "    syscall\n");     /* call the kernel to execute */
+        strcat(
+            self->m_output, "    syscall\n"); /* call the kernel to execute */
 
         return self->m_output;
 };
-
-// —————————————————————————————————————————————————————————————————————————————————————
-// PRIVATE
-
-static void generator_push(struct generator *self, const char *reg) {
-        strcat(self->m_output, "    push ");
-        strcat(self->m_output, reg);
-        strcat(self->m_output, "\n");
-        self->m_stack_size += 1;
-};
-
-static void generator_pop(struct generator *self, const char *reg) {
-        strcat(self->m_output, "    pop ");
-        strcat(self->m_output, reg);
-        strcat(self->m_output, "\n");
-        self->m_stack_size -= 1;
-};
-
-static err_t generator_vars_push_back_var(struct generator *self, const struct var var) {
-        if (self->m_vars_size > self->m_vars_capacity)
-                return ErrEnd;
-
-        if (self->m_vars == NULL || var.ident_name == NULL || var.stack_loc < 0)
-                return ErrInvalid;
-
-        self->m_vars[self->m_vars_size] = (struct var){
-            .stack_loc = var.stack_loc,
-            .ident_name = var.ident_name,
-        };
-        self->m_vars_size += 1;
-
-        return ErrOk;
-}
-
-static bool generator_vars_contains_ident(struct generator *self, const char *ident) {
-        if (self->m_vars_size == 0)
-                return false;
-
-        for (size_t i = 0; i < self->m_vars_size; i++) {
-                if (strcmp(self->m_vars[i].ident_name, ident) == 0)
-                        return true;
-        }
-
-        return false;
-}
 
 #endif /* A4541063_3A62_433A_A60C_275D5EB0263C */

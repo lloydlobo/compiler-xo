@@ -8,13 +8,14 @@ NamespaceIndentation: None
 
 BreakBeforeBraces: Attach # Allman | Stroustrup | Attach
 IndentWidth: 8  # if Attach use 8 spaces; else if Stroustrup use 4 spaces
-ColumnLimit: 100 # 80
+ColumnLimit: 100 # 80 | 100
 UseTab: Never
 
 PenaltyReturnTypeOnItsOwnLine: 200
 PenaltyIndentedWhitespace: 1
 PointerAlignment: Right
-AllowShortFunctionsOnASingleLine: None
+AllowShortFunctionsOnASingleLine: true # true | None
+AllowShortIfStatementsOnASingleLine: WithoutElse # true | WithoutElse
 AlwaysBreakTemplateDeclarations: Yes
 AlignConsecutiveMacros: None
 AlignConsecutiveDeclarations: true

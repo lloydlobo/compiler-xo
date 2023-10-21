@@ -1,0 +1,467 @@
+/*
+ * Luminisms inspired by Uiua
+ */
+
+/// Reverse each row of an array.
+rev_each_row :: () {
+    array := [[1, 2, 3], [4, 5, 6]]
+    reversed_array := [row[::-1] for row in array]
+    print(reversed_array)
+}
+
+/// Calculate the sum of an array.
+calculate_array_sum :: () {
+    array := [1, 2, 3, 4, 5]
+    array_sum := sum(array)
+    print(array_sum)
+}
+
+/// Determine the product of an array.
+determine_array_product :: () {
+    array := [1, 2, 3, 4, 5]
+    array_product := 1
+    for num in array:
+        array_product *= num
+    print(array_product)
+}
+
+/// Find the maximum value in an array.
+find_max_value :: () {
+    array := [1, 4, 5, 3, 2]
+    max_value := max(array)
+    print(max_value)
+}
+
+/// Find the minimum value in an array.
+find_min_value :: () {
+    array := [1, 4, 5, 3, 2]
+    min_value := min(array)
+    print(min_value)
+}
+
+/// Sort an array.
+sort_array :: () {
+    my_list := [1, 4, 5, 3, 2]
+    sorted_list := sorted(my_list)
+    print(sorted_list)
+}
+
+/// Generate n numbers between 0 and 1 exclusively.
+generate_random_numbers_exclusively :: () {
+    import random
+    n := 10
+    random_numbers := [random.random() for _ in range(n)]
+    print(random_numbers)
+}
+
+/// Generate n numbers between 0 and 1 inclusively.
+generate_random_numbers_inclusively :: () {
+    import random
+    n := 11
+    random_numbers := [random.random() for _ in range(n)]
+    print(random_numbers)
+}
+
+/// Create an identity matrix.
+create_identity_matrix :: () {
+    n := 5
+    identity_matrix := [[1 if i == j else 0 for i in range(n)] for j in range(n)]
+    print(identity_matrix)
+}
+
+/// Create an X matrix.
+create_x_matrix :: () {
+    n := 5
+    x_matrix := [[1 if i == j or i + j == n - 1 else 0 for i in range(n)] for j in range(n)]
+    print(x_matrix)
+}
+
+/// Generate a zero matrix with the same shape as another.
+generate_zero_matrix :: () {
+    // Assuming `another` is a 2D list with dimensions(m, n)
+    m, n := len(another), len(another[0])
+    zero_matrix := [[0] * n for _ in range(m)]
+    print(zero_matrix)
+}
+
+/// Check if an array is a palindrome.
+check_palindrome :: () {
+    is_palindrome:: (array) {
+        return array == array[::-1]
+    }
+    array := [1, 2, 3, 2, 1]
+    result := is_palindrome(array)
+    print(result)
+}
+
+/// Convert a number to a string.
+convert_number_to_string :: () {
+    number := 17
+    number_str := str(number)
+    print(number_str)
+}
+
+/// Convert a string to a number.
+convert_string_to_number :: () {
+    number_str :: "42"
+    number := int(number_str)
+    print(number)
+}
+
+/// Convert a string to a list of code points.
+convert_string_to_code_points :: () {
+    string :: "Lumina"
+    code_points := [ord(char) for char in string]
+    print(code_points)
+}
+
+/// Convert a list of code points to a string.
+convert_code_points_to_string :: () {
+    code_points :: [85, 105, 117, 97]
+    string = "".join([chr(code) for code in code_points])
+    print(string)
+}
+
+/// Parse a string as a base 2 number.
+parse_binary_string :: () {
+    binary_str :: "110"
+    decimal_number := int(binary_str, 2)
+    print(decimal_number)
+}
+
+/// Parse a string as a base 3 (X between 3 and 9) number.
+parse_base_x_string :: () {
+    base_x_str :: "210"
+    base_x := int(base_x_str, 3)
+    print(base_x)
+}
+
+/// Identify the indices of all 1s.
+identify_indices_of_ones :: () {
+    array :: [0, 1, 0, 0, 1]
+    indices_of_ones = [i for i, value in enumerate(array) if value == 1]
+    print(indices_of_ones)
+}
+
+/// Interleave two arrays.
+interleave_arrays :: () {
+    array1 :: [1, 2, 3]
+    array2 :: [4, 5, 6]
+    interleaved_array := [x for pair in zip(array1, array2) for x in pair]
+    print(interleaved_array)
+}
+
+/// Intersperse an item between the rows of an array.
+intersperse_item :: () {
+    array :: [[1, 2], [3, 4], [5, 6]]
+    item :: [0, 0]
+    interspersed_array := [val for pair in zip(array, [item] * len(array)) for val in pair]
+    print(interspersed_array)
+}
+
+/// Split an array by a delimiter.
+split_array_by_delimiter :: () {
+    array :: [1, 2, 3, 4, 5]
+    delimiter :: 3
+    split_array := [[]]
+    for item in array:
+        if item == delimiter:
+            split_array.append([])
+        else:
+            split_array[-1].append(item)
+    print(split_array)
+}
+
+/// Split an array by a delimiter with fill elements.
+split_array_by_delimiter_with_fill :: () {
+    array :: [1, 2, 3, 4, 5]
+    delimiter :: 3
+    fill_element :: 0
+    split_array := []
+    temp := []
+    for item in array:
+        if item == delimiter:
+            split_array.append(temp)
+            temp = []
+        else:
+            temp.append(item)
+    split_array.append(temp + [fill_element])
+    print(split_array)
+}
+
+/// Split an array by a delimiter while keeping empty segments.
+split_array_by_delimiter_keeping_empty :: () {
+    array :: [1, 3, 3, 4, 5, 3, 3, 2]
+    delimiter :: 3
+    split_array := []
+    temp := []
+    for item in array:
+        if item == delimiter:
+            split_array.append(temp)
+            temp = []
+        else:
+            temp.append(item)
+    split_array.append(temp)
+    print(split_array)
+}
+
+/// Split an array into groups of contiguous equal elements.
+split_array_into_groups :: () {
+    array := []int{1, 1, 1, 2, 2, 1, 1, 4}
+	groupedArray := make([][]int, 0)
+	currentGroup := []int{}
+
+	for i, value := range array {
+		if i == 0 || value != array[i-1] {
+			currentGroup = []int{value}
+			groupedArray = append(groupedArray, currentGroup)
+		} else {
+			currentGroup = append(currentGroup, value)
+		}
+	}
+}
+
+/// Find the nth Fibonacci number.
+find_nth_fibonacci :: () {
+    find_nth_fibonacci(n)::{
+        a, b := 0, 1
+        for _ in range(n - 1):
+            a, b = b, a + b
+        return b
+    }
+
+    n :: 10
+    fib_number = find_nth_fibonacci(n)
+    print(fib_number)
+}
+
+/// Remove all instances of an element from a list.
+remove_all_instances_of_element :: () {
+    element :: 4
+    my_list :: [1, 4, 2, 0, 5, 4, 3]
+    filtered_list = [item for item in my_list if item != element]
+    print(filtered_list)
+}
+
+/// Remove all instances of a row from an array.
+remove_all_instances_of_row :: () {
+    row_to_remove :: [2, 0, 5, 3]
+    array :: [[1, 4, 2, 0], [5, 3, 2, 0], [2, 0, 5, 3]]
+    filtered_array := [row for row in array if row != row_to_remove]
+    print(filtered_array)
+}
+
+/// Filter elements based on a fixed predicate.
+filter_elements_fixed_predicate :: () {
+    my_list :: [0, 2, 3, 4, 0, 5]
+    filtered_list := [item for item in my_list if item == 0]
+    print(filtered_list)
+}
+
+/// Filter elements based on a dynamic predicate.
+filter_elements_dynamic_predicate :: () {
+    dynamic_predicate::(item) do return item % 2 == 0
+
+    my_list :: [1, 2, 3, 4, 5, 6]
+    filtered_list := [item for item in my_list if dynamic_predicate(item)]
+    print(filtered_list)
+}
+
+/// Find the most common row in an array.
+find_most_common_row :: () {
+    array :: [][]int{ {1, 2, 3}, {3, 4, 5}, {1, 2, 3}, {4, 5, 6}, }
+	rowCount := make(map[string]int) // Create a map to count the occurrences of each row
+	maxCount : int
+	mostCommonRow : []int
+	for _, row := range array {
+		rowStr := fmt.Sprint(row) // Convert the row to a string for map key
+		rowCount[rowStr]++
+		if rowCount[rowStr] > maxCount {
+			maxCount = rowCount[rowStr]
+			mostCommonRow = row
+		}
+	}
+	print(mostCommonRow)
+}
+
+/// Convert a string to uppercase.
+convert_string_to_uppercase :: () {
+    string :: "These are Words"
+    uppercase_string := string.upper()
+    print(uppercase_string)
+}
+
+/// Convert a string to lowercase.
+convert_string_to_lowercase :: () {
+    string :: "These are Words"
+    lowercase_string := string.lower()
+    print(lowercase_string)
+}
+
+/// Check if a string exists in a list of strings.
+check_string_in_list :: () {
+    search_string :: "lum"
+    list_of_strings :: ["foo", "bar", "baz"]
+    string_exists := search_string in list_of_strings
+    print(string_exists)
+}
+
+/// Trim leading whitespace.
+trim_leading_whitespace :: () {
+    string :: "   % remove these"
+    trimmed_string := string.lstrip()
+    print(trimmed_string)
+}
+
+/// Trim trailing whitespace.
+trim_trailing_whitespace :: () {
+    string :: "remove these %   "
+    trimmed_string := string.rstrip()
+    print(trimmed_string)
+}
+
+/// Trim prefix matching characters from a set.
+trim_prefix_matching_characters :: () {
+    string :: "ccab % remove this"
+    prefix_to_remove :: "abc"
+    trimmed_string := string.lstrip(prefix_to_remove)
+    print(trimmed_string)
+}
+
+/// Trim suffix matching characters from a set.
+trim_suffix_matching_characters :: () {
+    string :: "remove this % bcaa"
+    suffix_to_remove :: "abc"
+    trimmed_string := string.rstrip(suffix_to_remove)
+    print(trimmed_string)
+}
+
+/// Trim whitespace.
+trim_whitespace :: () {
+    string :: "  abc xyz   "
+    trimmed_string := string.strip()
+    print(trimmed_string)
+}
+
+/// Upscale a colored image.
+upscale_colored_image :: () {
+    // Assuming you have an image represented as a 2D list of RGB values
+    image :: [[(0, 0, 255), (0, 255, 0)], [(255, 0, 0), (0, 0, 0)]]
+    upscaled_image := [[pixel for pixel in row] for row in image]
+    upscaled_image := [[px for row in upscaled_image] for px in image[0]]
+    print(upscaled_image)
+}
+
+/// Perform linear interpolation between two values.
+perform_linear_interpolation :: () {
+    value1 :: 0
+    value2 :: 10
+    alpha :: 0.2
+    interpolated_value := value1 * (1 - alpha) + value2 * alpha
+    print(interpolated_value)
+}
+
+/// Set the value of an array at a specific index.
+set_array_value_at_index :: () {
+    my_list :: [1, 2, 3, 4, 5]
+    index :: 2
+    new_value :: 10
+    my_list[index] = new_value
+    print(my_list)
+}
+
+/// Create a matrix filled with random 0s or 1s.
+create_matrix_random_01 :: () {
+    import random
+
+    n :: 5
+    random_matrix := [[random.choice([0, 1]) for _ in range(n)] for _ in range(n)]
+    print(random_matrix)
+}
+
+/// Create a matrix filled with random numbers.
+create_matrix_random_numbers :: () {
+    import random
+
+    n :: 5
+    random_matrix := [[random.uniform(0, 1) for _ in range(n)] for _ in range(n)]
+    print(random_matrix)
+}
+
+/// Calculate the arithmetic mean.
+calculate_arithmetic_mean :: () {
+    numbers :: [85, 105, 117, 97]
+    mean := sum(numbers) / len(numbers)
+    print(mean)
+}
+
+/// Calculate the dot product.
+calculate_dot_product :: () {
+    vector1 :: [1, 2, 3]
+    vector2 :: [4, -5, 6]
+    dot_product := sum(v1 * v2 for v1, v2 in zip(vector1, vector2))
+    print(dot_product)
+}
+
+/// Calculate the cross product.
+calculate_cross_product :: () {
+    vector1 :: (1, 2, 3)
+    vector2 :: (4, 5, 6)
+    cross_product := (
+        vector1[1] * vector2[2] - vector1[2] * vector2[1],
+        vector1[2] * vector2[0] - vector1[0] * vector2[2],
+        vector1[0] * vector2[1] - vector1[1] * vector2[0],
+    )
+    print(cross_product)
+}
+
+/// Perform matrix multiplication.
+perform_matrix_multiplication :: () {
+    matrix1 :: [[1, 2], [3, 4]]
+    matrix2 :: [[5, 6], [7, 8]]
+    result_matrix := [[sum(a * b for a, b in zip(row1, col2)) for col2 in zip(*matrix2)] for row1 in matrix1]
+    print(result_matrix)
+}
+
+/// Calculate the matrix power (works with scalars as well).
+calculate_matrix_power :: () {
+    calculate_matrix_power:: (matrix, exponent) {
+        if exponent == 1:
+            return matrix
+        result := matrix
+        for _ in range(1, exponent):
+            result = [[sum(a * b for a, b in zip(row1, col2)) for col2 in zip(*result)] for row1 in matrix]
+        return result
+    }
+
+    matrix :: [[1, 2], [3, 4]]
+    exponent :: 2
+    result_matrix := calculate_matrix_power(matrix, exponent)
+    print(result_matrix)
+}
+
+/// Add a leading axis with a length of 1 to an array.
+add_leading_axis_to_array :: () {
+    array := []int{1, 2, 3, 4, 5}
+
+	// Creating a new slice with a leading axis of 1
+	leadingAxisArray := make([]int, len(array)+1)
+	leadingAxisArray[0] := 1
+	copy(leadingAxisArray[1:], array)
+
+	// Printing the leadingAxisArray
+	print(leadingAxisArray)
+}
+
+/// Repeatedly apply a function and collect intermediate results into an array.
+apply_function_and_collect_intermediate_results :: () {
+    custom_function::(x) do return x * 2
+
+    n :: 10
+    initial_value :: 1
+    intermediate_results := [initial_value]
+    for _ in range(n):
+        new_result := custom_function(intermediate_results[-1])
+        intermediate_results.append(new_result)
+    print(intermediate_results)
+}
