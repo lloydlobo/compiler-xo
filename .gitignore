@@ -1,11 +1,12 @@
+# .gitignore
 
 # build compiler output
 
+lumina
 build
 
 # build artifacts
 
-lumina
 libc
 libc.o
 out
@@ -13,11 +14,12 @@ out.o
 tmp
 tmp.o
 
-# valgrind artifacts
+# valgrind debug artifacts
 
 vgcore.*
 
 # editor / linter artifacts
+
 .cache
 .vscode
 
@@ -31,5 +33,6 @@ src/lib/output
 src/neoparser.h
 src/output
 src/comptime.h
-docs/scratch.org
+
+docs/references/
 docs/scripts/

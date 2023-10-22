@@ -1,4 +1,6 @@
-## Language tour
+# Like these
+
+## 2023-10-21
 
 ### Variables
 
@@ -414,7 +416,6 @@ hypot :: foo struct <- (a float, b float)
 ```
 
 #### Compile time struct args
-
 
 ```C
 TakeawayPizza :: struct (count_of_pizzas_slices: int) {

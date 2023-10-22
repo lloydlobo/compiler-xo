@@ -3,16 +3,9 @@ bmut := 11
 c :: 2
 exit(a)
 
-myfunction :: () {
+// [Let's Build a Compiler, by Jack Crenshaw](https://compilers.iecc.com/crenshaw/)
+
+myprocedure :: () {
+        // var in scope of myprocedure
+        d :: 3
 }
-
-// TODO: enable `_` for pretty identifier names a_imut_var...
-
-// x :: "hello"
-// y = 2
-// var big_variable : int
-
-// _ + 2
-/// # Documentation comment
-// Line comment
-/* Block comment */

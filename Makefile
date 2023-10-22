@@ -1,14 +1,5 @@
 all: debug
 
-format:
-	python3 pkg/luminafmt/luminafmt.py --verbose --write test.lum
-
-wip:
-	./lumina test.lum
-
-valwip:
-	valgrind ./lumina test.lum
-
 demo:
 	./lumina examples/demo/demo.lum
 
@@ -26,3 +17,20 @@ release_native:
 
 nightly:
 	./build_lumina.sh nightly
+
+lumfmt:
+	python3 pkg/lumfmt/lumfmt.py --verbose --write test.lum
+
+
+# DEV MODE
+
+dev_run:
+	./lumina test.lum
+
+memcheck_dev_run:
+	valgrind make dev_run
+
+debug_memcheck_dev_run_exec:
+	make debug & make memcheck_dev_run
+	./out & echo $?
+
