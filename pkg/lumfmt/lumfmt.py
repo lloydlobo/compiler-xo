@@ -2,7 +2,7 @@
 # `lumfmt` - Formatter for Lumina
 
 Usage:
-    $ python3 pkg/lumfmt/lumfmt.py test.lum --verbose --write --spaces 8
+    $ python3 pkg/lumfmt/lumfmt.py test.lum --write
 
 Output:
     $ lumfmt test.lum
@@ -14,7 +14,7 @@ Output:
 
 align_comment :: true    // Align consecutive end-of-line comments
 indent :: 4              // Number of spaces to indent each line
-trailing_newline :: true // Add a trailing newline to end of file
+trailing_newline :: false // Add a trailing newline to end of file
 """
 
 
@@ -24,10 +24,11 @@ import sys
 from time import perf_counter
 
 CONFIG_FILENAME = ".fmt.lum"
+FILE_EXTENSION_DOT_LUM = ".lum"
 
 
 def format_code(input_code, filename: str, flag_spaces: int,
-                flag_verbose: bool):
+                flag_trailing_newline: bool, flag_verbose: bool):
     if flag_verbose:
         print_to_term(text=input_code, filename=filename)
         print("Formatting...")
@@ -37,7 +38,8 @@ def format_code(input_code, filename: str, flag_spaces: int,
     in_comment_block = False
     indent = ' ' * flag_spaces
 
-    lines = input_code.split("\n")
+    lines = input_code.strip().split("\n")
+
     for line in lines:
         line = line.strip()
 
@@ -65,6 +67,9 @@ def format_code(input_code, filename: str, flag_spaces: int,
                 else:
                     buf += indent * indent_level + line + '\n'
 
+    if flag_trailing_newline:
+        buf += '\n'
+
     if flag_verbose:
         print("Formatted successfully")
         print_to_term(text=buf, filename=filename)
@@ -72,34 +77,17 @@ def format_code(input_code, filename: str, flag_spaces: int,
     return buf
 
 
-def print_to_term(text, filename: str):
-    indent = " " * 2
-    print("-" * 80)
-    print(f"{indent*2} | File: {filename}")
-    print("-" * 80)
-
-    lines = text.split("\n")
-    line_count = len(lines)
-    line_num_width = len(str(line_count))
-
-    for i, line in enumerate(lines, start=1):
-        line_num = str(i).rjust(line_num_width)
-        print(f"{indent}{line_num} | {line}")
-
-    print("-" * 80)
-
-
 def init_config(filename: str, flag_verbose: bool):
     """
     align_comment :: true    // Align consecutive end-of-line comments
     indent :: 4              // Number of spaces to indent each line
-    trailing_newline :: true // Add a trailing newline to end of file
+    trailing_newline :: false // Add a trailing newline to end of file
     """
 
     config = {
         "align_comment": True,
         "indent": 4,
-        "trailing_newline": True,
+        "trailing_newline": False,
     }
 
     config_file = load_file(filename)
@@ -115,40 +103,59 @@ def init_config(filename: str, flag_verbose: bool):
 
         if "::" in line:
             ident, ident_value = line.split("::", 1)
-            val = config.get(ident.strip())
+            ident = ident.strip()
+            val = config.get(ident)
             if val is None:
-                sys.exit(
-                    f"error: {ident} is not a valid configuration property of {CONFIG_FILENAME}")
-            config[ident.strip()] = ident_value.split("//", 1)[0].strip()
+                sys.exit(f"error: {ident} is not a valid configuration "
+                         "property of {CONFIG_FILENAME}")
 
-    print("TODO: parse config values. e.g. `'true'` to `True` `'1'` to `1`")
+            new_val = ident_value.split("//", 1)[0].strip()
+            val_at_config = config[ident]
+            val_at_config_type = type(val_at_config)
+
+            if val_at_config_type is bool:
+                if new_val == "true":
+                    config[ident] = True
+                elif new_val == "false":
+                    config[ident] = False
+                else:
+                    raise ValueError(f"""error: invalid boolean type for:
+                                 property {ident} of value {ident_value} with
+                                 expected type {val_at_config_type}""")
+            elif val_at_config_type is int:
+                config[ident] = int(new_val)
+            elif val_at_config_type is str:
+                config[ident] = new_val
+            else:
+                raise ValueError(f"""error: unimplimented parsing for:
+                                 property {ident} of value {ident_value} with
+                                 expected type {val_at_config_type}""")
 
     return config
 
 
 # .
 # ...
-# Busy work this point ownwards ....
+# ........
 # ...
 # ..
 
 
-def try_valid_os_path_like(filename: os.PathLike, name: (None | str), ext: str,
-                           err_name: str, err_ext: str):
-    fname, fext = os.path.splitext(filename)
+def print_to_term(text, filename: str):
+    indent = " " * 2
+    print("-" * 80)
+    print(f"{indent*2} | File: {filename}")
+    print("-" * 80)
 
-    if len(err_name.strip()) == 0 or len(err_ext.strip()) == 0:
-        sys.exit(f"error(dev): errmsg_ not found while validating {filename}")
+    lines = text.strip().split("\n")
+    line_count = len(lines)
+    line_num_width = len(str(line_count))
 
-    # Expected a valid <input>.lum file. Got `{fname}`
-    if len(fname) == 0:
-        sys.exit(f"error: {err_name}. Got `{fname}`")
-    # Expected a valid .fmt.lum file. Got `{fname}`.
-    if name is not None and fname != name:
-        sys.exit(f"error: {err_name}. Got `{fname}`. Expected `{name}`")
-    # Expected file with extension `.lum`. Got `{fext}`
-    if fext != ext:
-        sys.exit(f"error: {err_ext}. Got `{fext}`")
+    for i, line in enumerate(lines, start=1):
+        line_num = str(i).rjust(line_num_width)
+        print(f"{indent}{line_num} | {line}")
+
+    print("-" * 80)
 
 
 # -> str | None
@@ -165,7 +172,7 @@ def unload_file(filename: str, data: str):
     chars_written = None
 
     with open(filename, 'w') as file:
-        chars_written = file.write(data.strip())
+        chars_written = file.write(data)
     return chars_written
 
 
@@ -199,6 +206,11 @@ def run(workspace_id: int, workspace_label: str):
     parser.add_argument("--write", action="store_true",
                         help="Write the formatted code to file")
     parser.add_argument("--out", help="Specify the output file to write to")
+    parser.add_argument("--trailing_newline", action="store_true",
+                        help="Add a trailing newline to end of file")
+    # align_comment :: true // Align consecutive end-of-line comments
+    # indent :: 4 // Number of spaces to indent each line
+    # trailing_newline :: true // Add a trailing newline to end of file
 
     args = parser.parse_args()
     filename = args.filename
@@ -206,6 +218,7 @@ def run(workspace_id: int, workspace_label: str):
     flag_spaces = args.spaces
     flag_write = args.write
     flag_out_filename = args.out
+    flag_trailing_newline = args.trailing_newline
 
     # Log out start of program.
 
@@ -213,28 +226,39 @@ def run(workspace_id: int, workspace_label: str):
 
     # validate_args
 
-    try_valid_os_path_like(filename=filename, name=None, ext=".lum",
-                           err_name="Expected a valid <input>.lum file.",
-                           err_ext="Expected file with extension `.lum`.")
+    fname, fext = os.path.splitext(filename)
+    if len(fname) == 0:
+        sys.exit("error: Expected a valid "
+                 f"<input>.{FILE_EXTENSION_DOT_LUM} file. Got `{fname}`")
+    if fext != FILE_EXTENSION_DOT_LUM:
+        sys.exit("error: Expected file with extension "
+                 f"`{FILE_EXTENSION_DOT_LUM}`. Got `{fext}`")
+
     if flag_out_filename is not None:
-        try_valid_os_path_like(filename=filename, name=None, ext=".lum",
-                               err_name="Expected a valid <output>.lum file.",
-                               err_ext="Expected file with extension `.lum`.")
+        fname, fext = os.path.splitext(flag_out_filename)
+        if len(fname) == 0:
+            sys.exit("error: Expected a valid "
+                     f"<output>.{FILE_EXTENSION_DOT_LUM} file. Got `{fname}`")
+        if fext != FILE_EXTENSION_DOT_LUM:
+            sys.exit("error: Expected file with extension "
+                     f"`{FILE_EXTENSION_DOT_LUM}`. Got `{fext}`")
 
     # read user config file settings
 
     cfg_path = "/" + CONFIG_FILENAME
-
+    user_config = None
     found_cfg = os.path.isabs(cfg_path) and (os.path.dirname(cfg_path) == '/')
+
     if found_cfg:
         if flag_verbose:
-            print(f"Found config file {cfg_path} in root directory.")
+            print(f"Found config file {CONFIG_FILENAME} in root directory.")
 
         user_config = init_config(CONFIG_FILENAME, flag_verbose)
+
+        # mutate default configuration flags
         if user_config is not None:
-            if flag_verbose:
-                print(user_config)
-            print("TODO: parse config values. e.g. `'true'` to `True` `'1'` to `1`")
+            flag_spaces = user_config["indent"]
+            flag_trailing_newline = user_config["trailing_newline"]
 
     # read input file
 
@@ -242,11 +266,12 @@ def run(workspace_id: int, workspace_label: str):
     unformatted_code = None
     if flag_verbose:
         print(f"Loading file '{filename}'...")
+
     unformatted_code = load_file(filename)
+
     if len(unformatted_code) == 0 or unformatted_code is None:
         sys.exit(f"error: File {filename} seems to be empty")
-
-    if flag_verbose and unformatted_code is not None:
+    if flag_verbose:
         print("Loaded successfully")
     prof_elapsed_frontend = profile.stop()
 
@@ -256,6 +281,7 @@ def run(workspace_id: int, workspace_label: str):
     formatted_code = None
     formatted_code = format_code(input_code=unformatted_code,
                                  filename=filename, flag_spaces=flag_spaces,
+                                 flag_trailing_newline=flag_trailing_newline,
                                  flag_verbose=flag_verbose)
     if formatted_code is None:
         sys.exit(f"error: Failed to format {filename}")
@@ -270,12 +296,15 @@ def run(workspace_id: int, workspace_label: str):
             outfile = flag_out_filename
         if flag_write and flag_verbose:
             print(f"Writing formatted code to file '{filename}'...")
+
         chars_written = unload_file(filename=outfile, data=formatted_code)
+
         if flag_write:
             print(f"{chars_written} bytes written to {filename}")
         perf_elapsed_unload = profile.stop()
         if prof_elapsed_frontend and perf_elapsed_unload:
-            prof_elapsed_frontend += round(perf_elapsed_unload, 6)
+            prof_elapsed_frontend += perf_elapsed_unload
+            prof_elapsed_frontend = round(prof_elapsed_frontend, 6)
 
     # show program flow profile results
 
